@@ -5,7 +5,7 @@ export type ModuleProps={token:string;role:string;passport:Passport|null;mode:Mo
 export const num=(v:number|null|undefined,n=1)=>v==null||!Number.isFinite(v)?'—':v.toLocaleString('ru-RU',{minimumFractionDigits:n,maximumFractionDigits:n})
 export const rub=(v:number|null|undefined)=>v==null?'—':`${num(v/1_000_000,2)} млн ₽`
 export const dateText=(v:string|null|undefined)=>v?`${v.slice(8,10)}.${v.slice(5,7)}.${v.slice(0,4)}`:'—'
-export const prov=(v:string|null|undefined)=>v==='synthetic_demo'?'СИНТЕТИЧЕСКИЙ ДЕМО-НАБОР':v==='uploaded_dataset'?'ДАННЫЕ ОПЕРАТОРА · НЕ ВЕРИФИЦИРОВАНЫ':v==='sentinel2_osm_live'?'SENTINEL-2 / OPENSTREETMAP · КАНДИДАТЫ':v==='uploaded_geotiff'?'GEOTIFF ОПЕРАТОРА · КАНДИДАТЫ':v||'ИСТОЧНИК НЕИЗВЕСТЕН'
+export const prov=(v:string|null|undefined)=>v==='synthetic_demo'?'СИНТЕТИЧЕСКИЙ ДЕМО-НАБОР':v==='uploaded_dataset'?'ДАННЫЕ ОПЕРАТОРА · НЕ ВЕРИФИЦИРОВАНЫ':v==='sentinel2_raster_live'?'SENTINEL-2 · РАСТРОВЫЕ КАНДИДАТЫ':v==='sentinel2_osm_live'?'SENTINEL-2 / OPENSTREETMAP · КАНДИДАТЫ':v==='uploaded_geotiff'?'GEOTIFF ОПЕРАТОРА · КАНДИДАТЫ':v||'ИСТОЧНИК НЕИЗВЕСТЕН'
 export const medicalDisclaimer='Информационно-профилактический расчёт не заменяет консультацию и назначения врача. Модель не прошла клиническую валидацию.'
 export const targetQuery=(mode:Mode,target:string)=>mode==='simulation'?`?target_date=${encodeURIComponent(target)}`:''
 

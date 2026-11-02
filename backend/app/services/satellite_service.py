@@ -233,9 +233,11 @@ def save_candidates(db,candidates,origin,scene=None,commit=True):
     if scene:
         record=db.get(SatelliteScene,scene['scene_id'])
         if not record:
-            record=SatelliteScene(scene_id=scene['scene_id'],acquired_at=scene['acquired_at'],cloud_cover=scene['cloud_cover'],thumbnail=scene['thumbnail'],band_calibration=scene.get('calibration'),searched_at=datetime.now(timezone.utc))
+            record=SatelliteScene(scene_id=scene['scene_id'],acquired_at=scene['acquired_at'],cloud_cover=scene['cloud_cover'],coverage_pct=scene.get('coverage_pct'),thumbnail=scene['thumbnail'],band_calibration=scene.get('calibration'),searched_at=datetime.now(timezone.utc))
             db.add(record)
-        else:record.searched_at=datetime.now(timezone.utc)
+        else:
+            record.searched_at=datetime.now(timezone.utc)
+            if scene.get('coverage_pct') is not None:record.coverage_pct=scene['coverage_pct']
     for c in candidates:
         key=origin+':'+c['osm_id']; existing=db.scalar(select(Hotspot).where(Hotspot.source_key==key))
         if existing and (existing.status!='detected' or db.scalar(select(WorkOrder.id).where(WorkOrder.hotspot_id==existing.id).limit(1)) is not None):

@@ -54,4 +54,4 @@ def detect_geotiff(b04_tif:Annotated[UploadFile,File()],b08_tif:Annotated[Upload
 @router.get('/latest-scene')
 def latest_scene(db:Session=Depends(get_db)):
     scene=db.scalar(select(SatelliteScene).order_by(SatelliteScene.searched_at.desc()).limit(1))
-    return {'scene':{'scene_id':scene.scene_id,'acquired_at':scene.acquired_at,'cloud_cover':scene.cloud_cover,'thumbnail':scene.thumbnail} if scene else None}
+    return {'scene':{'scene_id':scene.scene_id,'acquired_at':scene.acquired_at,'cloud_cover':scene.cloud_cover,'coverage_pct':scene.coverage_pct,'thumbnail':scene.thumbnail} if scene else None}

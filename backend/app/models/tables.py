@@ -54,6 +54,7 @@ class SatelliteScene(Base):
     scene_id: Mapped[str] = mapped_column(String, primary_key=True)
     acquired_at: Mapped[str] = mapped_column(String)
     cloud_cover: Mapped[float] = mapped_column(Float)
+    coverage_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     thumbnail: Mapped[str | None] = mapped_column(String, nullable=True)
     searched_at: Mapped[datetime] = mapped_column(DateTime)
     band_calibration: Mapped[dict | None] = mapped_column(JSON, nullable=True)

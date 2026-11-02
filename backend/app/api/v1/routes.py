@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.config import settings
 from app.core.geography import DISTRICTS, NEIGHBORHOODS, MUNICIPALITIES
-from app.models.tables import Hotspot, Observation, WeeklyObservation, WeatherCache, ImportedSample
+from app.models.tables import Hotspot, Observation, WeeklyObservation, WeatherCache, ImportedSample, SatelliteScene
 from app.schemas.contracts import OptimizerRequest, FeatureCollection
 from app.services.weather_service import weather
 from app.services.phenology_ml_service import feature,predict,validation
@@ -46,10 +46,11 @@ async def weather_forecast(municipality:str='Краснодар',mode:Mode='live
 @router.get('/gis/hotspots',response_model=FeatureCollection)
 def hotspots(district:str|None=None,status:Literal['detected','assigned','in_progress','mowed_verified','completed_late_bloom']|None=None,min_risk:Annotated[float,Query(ge=0)]=0,db:Session=Depends(get_db)):
     allspots=spots(db); scores={r['id']:r for r in rank(allspots)}; features=[]
+    scenes={s.scene_id:s for s in db.scalars(select(SatelliteScene)).all()}
     for h in allspots:
         r=scores[h.id]
         if district and district!=h.district or status and status!=h.status or r['risk_index']<min_risk: continue
-        features.append({'type':'Feature','geometry':h.geometry,'properties':{'id':h.id,'area_ha':h.area_ha,'district':h.district,'landmark':h.landmark,'land_type':h.land_type,'bands':({'B02':None,'B03':None,'B04':None,'B08':None,'B11':None} if h.provenance.endswith('ndvi_only') else {'B02':None if '_missing_b02' in h.provenance else h.b02,'B03':None if '_missing_b03' in h.provenance else h.b03,'B04':h.b04,'B08':h.b08,'B11':None if '_missing_b11' in h.provenance else h.b11}),**r,'status':h.status,'mowing_date':h.mowing_date.isoformat() if h.mowing_date else None,'provenance':h.provenance,'data_provenance':h.data_provenance,'source_format':'sentinel2_l2a_osm' if h.data_provenance=='sentinel2_osm_live' else 'uploaded_geotiff' if h.data_provenance=='uploaded_geotiff' else 'uploaded_geojson' if h.provenance.startswith('uploaded_geojson') else 'synthetic_demo','scene_id':h.scene_id,'source_key':h.source_key,'bands_note':'B04/B08 reconstructed from NDVI; B02/B03/B11 unavailable' if h.provenance.endswith('ndvi_only') else 'Missing optional bands are null' }})
+        features.append({'type':'Feature','geometry':h.geometry,'properties':{'id':h.id,'area_ha':h.area_ha,'district':h.district,'landmark':h.landmark,'land_type':h.land_type,'bands':({'B02':None,'B03':None,'B04':None,'B08':None,'B11':None} if h.provenance.endswith('ndvi_only') else {'B02':None if '_missing_b02' in h.provenance else h.b02,'B03':None if '_missing_b03' in h.provenance else h.b03,'B04':h.b04,'B08':h.b08,'B11':None if '_missing_b11' in h.provenance else h.b11}),**r,'status':h.status,'mowing_date':h.mowing_date.isoformat() if h.mowing_date else None,'provenance':h.provenance,'data_provenance':h.data_provenance,'source_format':'sentinel2_l2a_raster' if h.data_provenance=='sentinel2_raster_live' else 'sentinel2_l2a_osm' if h.data_provenance=='sentinel2_osm_live' else 'uploaded_geotiff' if h.data_provenance=='uploaded_geotiff' else 'uploaded_geojson' if h.provenance.startswith('uploaded_geojson') else 'synthetic_demo','scene_id':h.scene_id,'scene_acquired_at':scenes[h.scene_id].acquired_at if h.scene_id in scenes else None,'scene_cloud_cover':scenes[h.scene_id].cloud_cover if h.scene_id in scenes else None,'source_key':h.source_key,'bands_note':'B04/B08 reconstructed from NDVI; B02/B03/B11 unavailable' if h.provenance.endswith('ndvi_only') else 'Missing optional bands are null' }})
     return {'type':'FeatureCollection','features':features}
 
 @router.get('/gis/plume-grid')

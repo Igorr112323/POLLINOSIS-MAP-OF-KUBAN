@@ -133,6 +133,7 @@ def main():
         except Exception as e:
             manifest['results']['overpass']={'status':'unavailable','error':f'{type(e).__name__}: {str(e)[:400]}'}
     except Exception as e:
+        destination.unlink(missing_ok=True);mask_path.unlink(missing_ok=True)
         manifest['results']['sentinel2']={'status':'error','error':f'{type(e).__name__}: {str(e)[:500]}'}
         print('sentinel2:',manifest['results']['sentinel2']['error'],file=sys.stderr,flush=True)
     try:

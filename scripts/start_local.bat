@@ -22,6 +22,11 @@ copy /y package-lock.json node_modules\.pollinoz-lock >nul
 call npm run build
 if errorlevel 1 (popd & exit /b 1)
 popd
+if exist backend\data\real_snapshots\krasnodar_sentinel2_hotspots.geojson (
+  echo Importing public snapshots without overwriting reserved work orders...
+  .venv\Scripts\python.exe scripts\import_live_kuban_data.py backend\data\real_snapshots --allow-partial --apply
+  if errorlevel 1 (echo Snapshot import failed; existing data was not replaced. & exit /b 1)
+)
 if not defined DEMO_MODE set DEMO_MODE=true
 if not defined OFFLINE set OFFLINE=false
 start "Pollinoz Backend - close this window to stop" /D "%CD%\backend" cmd /k "..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001"

@@ -403,12 +403,15 @@ def test_satellite_migration_preserves_existing_rows(tmp_path):
     with engine.begin() as conn:
         conn.execute(text('CREATE TABLE hotspots (id INTEGER PRIMARY KEY, data_provenance VARCHAR)'))
         conn.execute(text("INSERT INTO hotspots(id,data_provenance) VALUES(1,'uploaded_dataset')"))
+        conn.execute(text('CREATE TABLE satellite_scenes (scene_id VARCHAR PRIMARY KEY)'))
+        conn.execute(text("INSERT INTO satellite_scenes(scene_id) VALUES('old')"))
         conn.execute(text('CREATE TABLE weather_cache (id INTEGER PRIMARY KEY, key VARCHAR, payload JSON, updated_at DATETIME)'))
         conn.execute(text("INSERT INTO weather_cache(id,key,payload,updated_at) VALUES(1,'original','{}','2026-01-01')"))
     migrate_satellite(engine);migrate_satellite(engine)
     with engine.connect() as conn:
         assert conn.execute(text('SELECT id,data_provenance,scene_id,source_key,observed_ndvi FROM hotspots')).one()==(1,'uploaded_dataset',None,None,None)
         assert conn.execute(text('SELECT id,key,source_origin FROM weather_cache')).one()==(1,'original',None)
+        assert conn.execute(text('SELECT scene_id,band_calibration,coverage_pct FROM satellite_scenes')).one()==('old',None,None)
     assert {'scene_id','source_key','observed_ndvi'} <= {c['name'] for c in inspect(engine).get_columns('hotspots')}
     engine.dispose()
 
@@ -457,3 +460,72 @@ def test_snapshot_import_is_validated_additive_and_labels_cache(client, monkeypa
     with pytest.raises(ValueError):imp.validate_satellite(doc)
     weather['archive']['parameters']['models']='other'
     with pytest.raises(ValueError):imp.validate_weather(weather)
+
+def test_raster_screening_masks_water_cloud_built_and_spring():
+    import numpy as np
+    from rasterio.transform import from_bounds
+    from app.services.raster_screening import raster_candidates, water_polygons
+    from shapely.ops import unary_union
+    from pyproj import CRS
+    shape=(80,80)
+    a={'red':np.full(shape,.1,dtype='float32'),'nir':np.full(shape,.4,dtype='float32'),'swir16':np.full(shape,.2,dtype='float32'),'scl':np.full(shape,5,dtype='float32')}
+    a['scl'][5:12,5:12]=4;a['scl'][5:7,5:7]=6;a['scl'][8,8]=9;a['scl'][9,9]=3
+    a['scl'][30:37,30:37]=4
+    a['scl'][50:57,50:57]=6
+    calibration={key:{'scale':1.,'offset':0.} for key in ('red','nir','swir16')}
+    scene={'scene_id':'fixture','calibration':calibration}
+    spring={key:v.copy() for key,v in a.items()};spring['nir'][30:37,30:37]=.9;spring['red'][30:37,30:37]=.05
+    trans=from_bounds(38.90,45.10,38.92,45.12,80,80);crs=CRS.from_epsg(4326)
+    candidates=raster_candidates(a,trans,crs,scene,(spring,scene))
+    assert len(candidates)==1 and .3<=candidates[0]['area_ha']<=25
+    assert abs(candidates[0]['ndvi']-.6)<1e-5 and abs(candidates[0]['ndmi']-1/3)<1e-5
+    water=unary_union(water_polygons(a,trans,crs))
+    assert candidates[0]['geometry'].intersection(water).area<1e-14
+    assert len(raster_candidates(a,trans,crs,scene))==2
+    assert candidates[0]['osm_id']==raster_candidates(a,trans,crs,scene,(spring,scene))[0]['osm_id']
+
+def test_water_cleanup_only_unreserved_demo_and_rejects_wrong_scene(client,monkeypatch):
+    import importlib
+    from shapely.geometry import shape,box,mapping
+    from sqlalchemy import select
+    from app.models.tables import Hotspot
+    root=Path(__file__).resolve().parents[2];monkeypatch.syspath_prepend(str(root/'scripts'))
+    imp=importlib.import_module('import_live_kuban_data')
+    with SessionLocal() as db:
+        rows=db.scalars(select(Hotspot).order_by(Hotspot.id)).all()
+        first,second=rows[0],rows[1]; second.status='assigned';g1=shape(first.geometry);g2=shape(second.geometry);ids=(first.id,second.id)
+        db.commit()
+        result=imp.remove_unreserved_demo_over_water(db,[g1,g2]);db.commit()
+        assert result['removed']>=1 and result['protected']>=1
+        assert db.get(Hotspot,ids[0]) is None and db.get(Hotspot,ids[1]) is not None
+    sat={'scene':{'scene_id':'actual'},'retrieved_at':'2026-09-01T00:00:00+00:00'}
+    doc={'type':'FeatureCollection','schema_version':1,'bbox':list(imp.BBOX),'scene_id':'wrong','retrieved_at':sat['retrieved_at'],'features':[]}
+    with pytest.raises(ValueError):imp.validate_water(doc,sat)
+
+def test_overpass_failure_never_invalidates_satellite_snapshot(tmp_path,monkeypatch):
+    import importlib,sys,json
+    root=Path(__file__).resolve().parents[2];monkeypatch.syspath_prepend(str(root/'scripts'))
+    fetch=importlib.import_module('fetch_live_kuban_data')
+    monkeypatch.setattr(fetch,'fetch_satellite',lambda:({'type':'FeatureCollection','features':[],'osm_enrichment':{'status':'not_attempted'}}, {'type':'FeatureCollection','features':[]}, []))
+    def fail():raise RuntimeError('Overpass not reachable')
+    monkeypatch.setattr(fetch,'optional_landuse',fail)
+    monkeypatch.setattr(fetch,'fetch_weather',lambda:{'test':'placeholder'})
+    monkeypatch.setattr(sys,'argv',['fetch_live_kuban_data.py','--output-dir',str(tmp_path)])
+    assert fetch.main()==0
+    assert (tmp_path/'krasnodar_sentinel2_hotspots.geojson').exists()
+    manifest=json.loads((tmp_path/'manifest.json').read_text())
+    assert manifest['results']['sentinel2']['status']=='success' and manifest['results']['overpass']['status']=='unavailable'
+
+def test_overpass_enrichment_headers_and_fallback(monkeypatch):
+    from app.services import raster_screening as raster
+    from app.services.satellite_service import SatelliteError
+    calls=[]
+    def post(url,**kwargs):
+        calls.append((url,kwargs))
+        if len(calls)==1:raise SatelliteError('offline')
+        return {'elements':[]}
+    monkeypatch.setattr(raster,'_json_post',post)
+    records,endpoint,errors=raster.optional_landuse()
+    assert not records and endpoint==raster.OVERPASS_ENDPOINTS[1] and len(errors)==1
+    assert calls[0][1]['headers']['Accept']=='*/*' and calls[0][1]['headers']['Content-Type']=='application/x-www-form-urlencoded'
+    assert '[timeout:25]' in calls[0][1]['data']['data'] and calls[0][1]['headers']['User-Agent']
