@@ -28,6 +28,7 @@ class BatchRequest(BaseModel):
     daily_team_capacity_ha:float=Field(default=5,gt=0,le=100)
     max_area_ha:float|None=Field(default=None,ge=0)
     target_risk_capture_pct:float=Field(default=99,ge=0,le=100)
+    hotspot_ids:list[int]|None=Field(default=None,min_length=1,max_length=500)
 
 class StatusRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -47,7 +48,11 @@ def generate_batch(payload:BatchRequest,db:Session=Depends(get_db),user:User=Dep
     # Existing orders reserve sites; teams' already scheduled work also reserves time.
     existing=list(db.scalars(select(WorkOrder)))
     reserved={o.hotspot_id for o in existing}
-    hs=[h for h in hs if h.id not in reserved and h.status=='detected']
+    if payload.hotspot_ids is not None:
+        if len(set(payload.hotspot_ids))!=len(payload.hotspot_ids): raise HTTPException(422,'Duplicate hotspot IDs')
+        known={h.id for h in hs}
+        if not set(payload.hotspot_ids).issubset(known): raise HTTPException(422,'Unknown hotspot ID')
+    hs=[h for h in hs if h.id not in reserved and h.status=='detected' and (payload.hotspot_ids is None or h.id in payload.hotspot_ids)]
     result=optimize(hs,brigades_count=len(users),daily_norm_ha=payload.daily_team_capacity_ha,work_start_date=payload.work_start_date,mowing_deadline_date=payload.mowing_deadline_date,max_area_ha=payload.max_area_ha,target_risk_capture_pct=payload.target_risk_capture_pct)
     hmap={h.id:h for h in hs}; ranking={r['id']:r['rank'] for r in rank(hs)}
     # Do not overlap previous orders for a team; reserve conservatively through latest planned date.

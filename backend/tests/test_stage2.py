@@ -255,3 +255,156 @@ def test_patient_can_list_clinics_without_access_to_dashboard(client):
     assert clinics.status_code==200 and len(clinics.json()['clinics'])==4
     assert 'disclaimer' in clinics.json()
     assert client.get('/api/v1/clinical/dashboard',headers=patient).status_code==403
+
+def test_point_forecast_and_targeted_batch(client):
+    point=client.get('/api/v1/gis/point-forecast',params={'latitude':45.09,'longitude':39.0,'mode':'simulation','target_date':'2026-08-24','scenario':'no_mowing'})
+    assert point.status_code==200,point.text
+    data=point.json(); assert len(data['days'])==14 and data['scenario']=='no_mowing' and 'не измерение' in data['note']
+    assert client.get('/api/v1/gis/point-forecast',params={'latitude':90,'longitude':39}).status_code==422
+    admin=login(client,'admin'); brigade=login(client,'brigade'); bid=client.get('/api/v1/auth/me',headers=brigade).json()['id']
+    body={'mowing_deadline_date':'2026-08-05','work_start_date':'2026-07-01','brigade_ids':[bid],'daily_team_capacity_ha':10,'target_risk_capture_pct':100,'hotspot_ids':[1,2]}
+    result=client.post('/api/v1/work-orders/generate-batch',headers=admin,json=body)
+    assert result.status_code==201 and {o['hotspot_id'] for o in result.json()['orders']}=={1,2}
+    body['hotspot_ids']=[999999]
+    assert client.post('/api/v1/work-orders/generate-batch',headers=admin,json=body).status_code==422
+
+def test_demo_water_exclusion_is_applied_to_entire_polygons(client):
+    from shapely.geometry import shape, Point
+    from app.core.water_mask import demo_water_exclusion
+    mask=demo_water_exclusion()
+    assert mask.covers(Point(38.92,45.025))  # conservative southern exclusion, includes river bend
+    assert mask.covers(Point(39.10,45.00))  # conservative lake/reservoir exclusion
+    features=client.get('/api/v1/gis/hotspots').json()['features']
+    assert len(features)==189
+    assert all(shape(f['geometry']).disjoint(mask) for f in features)
+
+def _synthetic_tif():
+    import numpy as np
+    from rasterio.io import MemoryFile
+    from rasterio.transform import from_origin
+    red=np.full((20,20),.2,dtype='float32'); nir=np.full((20,20),.2,dtype='float32');nir[:,:10]=.6
+    with MemoryFile() as mem:
+        with mem.open(driver='GTiff',height=20,width=20,count=2,dtype='float32',crs='EPSG:4326',transform=from_origin(39.,45.10,.00012,.00009)) as ds:
+            ds.write(red,1);ds.write(nir,2)
+        return mem.read()
+
+def test_geotiff_real_ndvi_upload_roles_and_idempotence(client):
+    admin=login(client,'admin');patient=login(client,'patient'); data=_synthetic_tif()
+    files={'b04_tif':('test.tif',data,'image/tiff')}
+    assert client.post('/api/v1/satellite/detect-geotiff',files=files).status_code==401
+    assert client.post('/api/v1/satellite/detect-geotiff',headers=patient,files=files).status_code==403
+    r=client.post('/api/v1/satellite/detect-geotiff',headers=admin,files=files)
+    assert r.status_code==200,r.text
+    assert r.json()['detected']==1 and r.json()['inserted']==1 and 'не определены' in r.json()['mask_note']
+    spots=client.get('/api/v1/gis/hotspots').json()['features']
+    assert len(spots)==190
+    p=next(f['properties'] for f in spots if f['properties']['data_provenance']=='uploaded_geotiff')
+    assert p['ndvi']==pytest.approx(.5,abs=1e-5) and p['bands']['B04']==pytest.approx(.2) and p['bands']['B08']==pytest.approx(.6)
+    assert p['bands']['B11'] is None and p['ndmi'] is None and p['scene_id'] is None
+    r=client.post('/api/v1/satellite/detect-geotiff',headers=admin,files=files)
+    assert r.status_code==200 and r.json()['inserted']==0 and r.json()['updated']==1
+    assert len(client.get('/api/v1/gis/hotspots').json()['features'])==190
+    assert client.post('/api/v1/satellite/detect-geotiff',headers=admin,files={'b04_tif':('bad.tif',b'not a tif')}).status_code==422
+    off=client.post('/api/v1/satellite/scan-live',headers=admin)
+    assert off.status_code==503 and 'OFFLINE=true' in off.json()['detail']
+
+def test_scene_classification_and_live_import(client, monkeypatch):
+    import numpy as np
+    from shapely.geometry import box
+    from rasterio.transform import from_origin
+    from app.core.config import settings
+    from app.services.satellite_service import classify_parcels
+    from app.api.v1 import satellite
+    from rasterio.crs import CRS
+    trans=from_origin(39.,45.1,.00012,.00009)
+    parcel={'geometry':box(39.,45.0982,39.0012,45.1),'area_ha':2.,'osm_id':'way/123/0','land_type':'grass','name':'OSM'}
+    arrays={'red':np.full((20,20),2000,dtype='float32'),'nir':np.full((20,20),6000,dtype='float32'),'swir16':np.full((20,20),3000,dtype='float32'),'scl':np.full((20,20),4,dtype='float32')}
+    cal={k:{'scale':.0001,'offset':0} for k in ('red','nir','swir16')}
+    matches=classify_parcels([parcel],arrays,trans,CRS.from_epsg(4326),cal)
+    assert len(matches)==1 and matches[0]['ndvi']==pytest.approx(.5) and matches[0]['b11']==pytest.approx(.3)
+    shifted={k:{'scale':.0001,'offset':-.1} for k in ('red','nir','swir16')}
+    assert classify_parcels([parcel],arrays,trans,CRS.from_epsg(4326),shifted)[0]['ndvi']==pytest.approx(2/3,rel=1e-6)
+    arrays['scl'][:]=6
+    assert classify_parcels([parcel],arrays,trans,CRS.from_epsg(4326),cal)==[]
+    arrays['scl'][:]=4
+    scene={'scene_id':'S2A_TEST','acquired_at':'2026-08-24T00:00:00Z','cloud_cover':4.,'thumbnail':None,'coverage_pct':100.,'season':'test','calibration':cal}
+    monkeypatch.setattr(settings,'offline',False)
+    monkeypatch.setattr(satellite,'find_scene',lambda:(scene,{}))
+    monkeypatch.setattr(satellite,'osm_parcels',lambda:[parcel])
+    monkeypatch.setattr(satellite,'read_scene',lambda urls:(arrays,trans,CRS.from_epsg(4326)))
+    r=client.post('/api/v1/satellite/scan-live',headers=login(client,'admin'))
+    assert r.status_code==200,r.text
+    assert r.json()['scene']['scene_id']=='S2A_TEST' and r.json()['inserted']==1
+    p=next(f['properties'] for f in client.get('/api/v1/gis/hotspots').json()['features'] if f['properties']['data_provenance']=='sentinel2_osm_live')
+    assert p['scene_id']=='S2A_TEST' and p['source_key'].endswith('way/123/0') and p['ndvi']==pytest.approx(.5)
+    assert client.get('/api/v1/satellite/latest-scene').json()['scene']['scene_id']=='S2A_TEST'
+
+def test_stac_search_and_osm_geometry_parsing(monkeypatch):
+    from app.services import satellite_service as sat
+    from shapely.geometry import mapping,box
+    assets={k:{'href':f'https://sentinel-cogs.s3.us-west-2.amazonaws.com/test/{k}.tif','raster:bands':[{'scale':.0001,'offset':-.1}]} for k in ('red','nir','swir16','scl')}
+    assets['thumbnail']={'href':'https://sentinel-cogs.s3.us-west-2.amazonaws.com/test/thumbnail.jpg'}
+    feature={'type':'Feature','id':'scene-actual-id','geometry':mapping(box(38.8,44.9,39.2,45.2)),'properties':{'datetime':'2026-08-15T09:00:00Z','eo:cloud_cover':5},'assets':assets}
+    calls=[]
+    def fake(url,**kwargs):
+        calls.append((url,kwargs))
+        if url==sat.STAC:return {'features':[feature]}
+        def ring(x,y,step):return [{'lon':x,'lat':y},{'lon':x+step,'lat':y},{'lon':x+step,'lat':y+step},{'lon':x,'lat':y+step},{'lon':x,'lat':y}]
+        return {'elements':[{'type':'way','id':101,'tags':{'landuse':'grass'},'geometry':ring(39.,45.08,.001)}, {'type':'way','id':102,'tags':{'landuse':'forest'},'geometry':ring(39.01,45.08,.001)}, {'type':'way','id':103,'tags':{'natural':'scrub'},'geometry':ring(39.01,45.08,.001)}]}
+    monkeypatch.setattr(sat,'_json_post',fake)
+    scene,urls=sat.find_scene(date(2026,11,3));assert scene['scene_id']=='scene-actual-id' and scene['coverage_pct']==100 and urls['red'].endswith('red.tif') and scene['calibration']['red']['offset']==-.1
+    search=calls[0][1]['json'];assert search['collections']==['sentinel-2-l2a'] and search['query']['eo:cloud_cover']['lt']==20 and search['datetime'].startswith('2026-07-25')
+    parcels=sat.osm_parcels();assert len(parcels)==1 and parcels[0]['osm_id']=='way/101/0'
+    assert all(term in calls[1][1]['data']['data'] for term in ('industrial','scrub','forest','44.98,38.88,45.14,39.13'))
+    feature['assets']['red']['href']='https://untrusted.example/red.tif'
+    with pytest.raises(sat.SatelliteError):sat.find_scene(date(2026,11,3))
+
+def test_remote_window_reader_aligns_bands_on_common_grid(tmp_path):
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_bounds
+    from app.services.satellite_service import read_scene, BBOX
+    urls={}
+    for name,value in [('red',2000),('nir',6000),('swir16',3000),('scl',4)]:
+        p=tmp_path/(name+'.tif');urls[name]=str(p)
+        with rasterio.open(p,'w',driver='GTiff',height=80,width=100,count=1,dtype='uint16',crs='EPSG:4326',transform=from_bounds(*BBOX,100,80)) as ds:ds.write(np.full((80,100),value,dtype='uint16'),1)
+    arrays,trans,crs=read_scene(urls)
+    assert all(a.shape==(512,512) for a in arrays.values()) and str(crs)=='EPSG:4326'
+    assert arrays['red'][256,256]==2000 and arrays['nir'][256,256]==6000 and arrays['scl'][256,256]==4
+
+def test_two_geotiff_bands_and_reserved_candidate_is_not_overwritten(client):
+    import numpy as np
+    from rasterio.io import MemoryFile
+    from rasterio.transform import from_origin
+    def image(value, x=39.):
+        with MemoryFile() as mem:
+            with mem.open(driver='GTiff',height=20,width=20,count=1,dtype='uint16',crs='EPSG:4326',transform=from_origin(x,45.1,.00012,.00009)) as ds:
+                ds.write(np.full((20,20),value,dtype='uint16'),1)
+            return mem.read()
+    admin=login(client,'admin');red=image(2000);nir=image(6000)
+    files={'b04_tif':('red.tif',red,'image/tiff'),'b08_tif':('nir.tif',nir,'image/tiff')}
+    data={'reflectance_scale':'0.0001','reflectance_offset':'-0.1'}
+    r=client.post('/api/v1/satellite/detect-geotiff',headers=admin,files=files,data=data)
+    assert r.status_code==200,r.text
+    p=next(f['properties'] for f in client.get('/api/v1/gis/hotspots').json()['features'] if f['properties']['data_provenance']=='uploaded_geotiff')
+    assert p['ndvi']==pytest.approx(2/3,rel=1e-6)
+    with SessionLocal() as db:
+        db.add(WorkOrder(hotspot_id=p['id'],priority_rank=1,planned_date=date(2026,8,1),status='planned'))
+        db.commit()
+    r=client.post('/api/v1/satellite/detect-geotiff',headers=admin,files=files,data=data)
+    assert r.status_code==200 and r.json()['skipped_reserved']==1 and r.json()['updated']==0
+    files['b08_tif']=('mismatch.tif',image(6000,39.01),'image/tiff')
+    assert client.post('/api/v1/satellite/detect-geotiff',headers=admin,files=files,data=data).status_code==422
+
+def test_satellite_migration_preserves_existing_rows(tmp_path):
+    from sqlalchemy import create_engine, text, inspect
+    from app.db.session import migrate_satellite
+    engine=create_engine('sqlite:///'+str(tmp_path/'legacy.db'))
+    with engine.begin() as conn:
+        conn.execute(text('CREATE TABLE hotspots (id INTEGER PRIMARY KEY, data_provenance VARCHAR)'))
+        conn.execute(text("INSERT INTO hotspots(id,data_provenance) VALUES(1,'uploaded_dataset')"))
+    migrate_satellite(engine);migrate_satellite(engine)
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT id,data_provenance,scene_id,source_key,observed_ndvi FROM hotspots')).one()==(1,'uploaded_dataset',None,None,None)
+    assert {'scene_id','source_key','observed_ndvi'} <= {c['name'] for c in inspect(engine).get_columns('hotspots')}
+    engine.dispose()

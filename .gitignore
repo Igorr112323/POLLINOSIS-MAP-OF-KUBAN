@@ -11,3 +11,5 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+
+pollinoz-karta-kubani-v2.zip

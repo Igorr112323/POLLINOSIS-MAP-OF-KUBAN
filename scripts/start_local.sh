@@ -10,7 +10,7 @@ if ! cmp -s frontend/package-lock.json frontend/node_modules/.pollinoz-lock; the
   (cd frontend && npm ci --prefer-offline --no-audit --no-fund && cp package-lock.json node_modules/.pollinoz-lock)
 fi
 (cd frontend && npm run build)
-export DEMO_MODE="${DEMO_MODE:-true}" OFFLINE="${OFFLINE:-true}"
+export DEMO_MODE="${DEMO_MODE:-true}" OFFLINE="${OFFLINE:-false}"
 (cd backend && exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8001) &
 api=$!
 trap 'kill "$api" 2>/dev/null || true' EXIT INT TERM

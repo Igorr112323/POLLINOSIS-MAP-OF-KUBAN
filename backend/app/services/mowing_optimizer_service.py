@@ -7,8 +7,8 @@ from app.core.geography import NEIGHBORHOODS
 WIND_ROSE = [(90,.38),(45,.32),(315,.20),(0,.10)]
 
 def vegetation(h):
-    ndvi=(h.b08-h.b04)/(h.b08+h.b04)
-    ndmi=(h.b08-h.b11)/(h.b08+h.b11) if h.b11 is not None and h.b08+h.b11 and not h.provenance.endswith('ndvi_only') else None
+    ndvi=h.observed_ndvi if getattr(h,'observed_ndvi',None) is not None else (h.b08-h.b04)/(h.b08+h.b04)
+    ndmi=(h.b08-h.b11)/(h.b08+h.b11) if h.b11 is not None and h.b08+h.b11 and not (h.provenance.endswith('ndvi_only') or '_missing_b11' in h.provenance) else None
     return ndvi,ndmi,max(.2,min(1.,(ndvi-.2)/.6))
 
 def rank(hotspots):

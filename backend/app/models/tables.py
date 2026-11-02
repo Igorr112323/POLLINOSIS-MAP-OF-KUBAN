@@ -45,6 +45,18 @@ class Hotspot(Base):
     mowing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     provenance: Mapped[str] = mapped_column(String, default='synthetic')
     data_provenance: Mapped[str] = mapped_column(String, default='synthetic_demo')
+    scene_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    source_key: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    observed_ndvi: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+class SatelliteScene(Base):
+    __tablename__ = 'satellite_scenes'
+    scene_id: Mapped[str] = mapped_column(String, primary_key=True)
+    acquired_at: Mapped[str] = mapped_column(String)
+    cloud_cover: Mapped[float] = mapped_column(Float)
+    thumbnail: Mapped[str | None] = mapped_column(String, nullable=True)
+    searched_at: Mapped[datetime] = mapped_column(DateTime)
+    band_calibration: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 class WeatherCache(Base):
     __tablename__ = 'weather_cache'

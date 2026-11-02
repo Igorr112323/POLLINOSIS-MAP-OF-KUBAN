@@ -48,7 +48,7 @@ def hotspots(district:str|None=None,status:Literal['detected','assigned','in_pro
     for h in allspots:
         r=scores[h.id]
         if district and district!=h.district or status and status!=h.status or r['risk_index']<min_risk: continue
-        features.append({'type':'Feature','geometry':h.geometry,'properties':{'id':h.id,'area_ha':h.area_ha,'district':h.district,'landmark':h.landmark,'land_type':h.land_type,'bands':({'B02':None,'B03':None,'B04':None,'B08':None,'B11':None} if h.provenance.endswith('ndvi_only') else {'B02':None if '_missing_b02' in h.provenance else h.b02,'B03':None if '_missing_b03' in h.provenance else h.b03,'B04':h.b04,'B08':h.b08,'B11':h.b11}),**r,'status':h.status,'mowing_date':h.mowing_date.isoformat() if h.mowing_date else None,'provenance':h.provenance,'data_provenance':h.data_provenance,'source_format':'uploaded_geojson' if h.provenance.startswith('uploaded_geojson') else 'synthetic_demo','bands_note':'B04/B08 reconstructed from NDVI; B02/B03/B11 unavailable' if h.provenance.endswith('ndvi_only') else 'Missing optional bands are null' }})
+        features.append({'type':'Feature','geometry':h.geometry,'properties':{'id':h.id,'area_ha':h.area_ha,'district':h.district,'landmark':h.landmark,'land_type':h.land_type,'bands':({'B02':None,'B03':None,'B04':None,'B08':None,'B11':None} if h.provenance.endswith('ndvi_only') else {'B02':None if '_missing_b02' in h.provenance else h.b02,'B03':None if '_missing_b03' in h.provenance else h.b03,'B04':h.b04,'B08':h.b08,'B11':None if '_missing_b11' in h.provenance else h.b11}),**r,'status':h.status,'mowing_date':h.mowing_date.isoformat() if h.mowing_date else None,'provenance':h.provenance,'data_provenance':h.data_provenance,'source_format':'sentinel2_l2a_osm' if h.data_provenance=='sentinel2_osm_live' else 'uploaded_geotiff' if h.data_provenance=='uploaded_geotiff' else 'uploaded_geojson' if h.provenance.startswith('uploaded_geojson') else 'synthetic_demo','scene_id':h.scene_id,'source_key':h.source_key,'bands_note':'B04/B08 reconstructed from NDVI; B02/B03/B11 unavailable' if h.provenance.endswith('ndvi_only') else 'Missing optional bands are null' }})
     return {'type':'FeatureCollection','features':features}
 
 @router.get('/gis/plume-grid')
@@ -61,6 +61,35 @@ async def plume_grid(mode:Mode='live',target_date:date|None=None,wind_speed_over
     result=calculate(spots(db),target,wind_speed_override if wind_speed_override is not None else day['wind_speed'],wind_dir_override if wind_dir_override is not None else day['wind_direction'],scenario,phenology)
     result['summary'].update({'hotspot_data_provenance':sorted({h.data_provenance for h in spots(db)}),'date':target.isoformat(),'scenario':scenario,'weather_source':w['source'],'phenology_factor':phenology})
     return result
+
+@router.get('/gis/point-forecast')
+async def point_forecast(request:Request,latitude:Annotated[float,Query(ge=44.85,le=45.25)],longitude:Annotated[float,Query(ge=38.65,le=39.30)],mode:Mode='live',target_date:date|None=None,scenario:Scenario='current',db:Session=Depends(get_db)):
+    """Illustrative city-model background plus local plume, evaluated at a clicked coordinate."""
+    import math
+    import numpy as np
+    from app.services.gaussian_plume_service import LAT,LON,source_vectors,plume_at
+    target=day_for(mode,target_date); w=await get_weather(db,'Краснодар',mode,target); allspots=spots(db)
+    gdd=w['gdd_10']; features=[]
+    for i,day in enumerate(w['days']):
+        d=date.fromisoformat(day['date'])
+        if i and d.month>=4: gdd+=max(0,(day['tmax']+day['tmin'])/2-10)
+        features.append(feature(d,day['tmax'],day['tmin'],day['dew'],gdd))
+    _,background=predict(request.app.state.model,features)
+    rx=np.array([(longitude-LON)*111320*math.cos(math.radians(LAT))]); ry=np.array([(latitude-LAT)*111320])
+    days=[]; contributors=[]
+    for i,(wd,bg) in enumerate(zip(w['days'],background)):
+        d=date.fromisoformat(wd['date']); doy=d.timetuple().tm_yday
+        factor=math.exp(-.5*((doy-242)/19)**2)/(1+math.exp(-max(-50,min(50,doy-224))))
+        sx,sy,q,_=source_vectors(allspots,d,scenario,factor)
+        local=float(plume_at(sx,sy,rx,ry,q,wd['wind_speed'],wd['wind_direction'])[0])
+        days.append({'date':d.isoformat(),'concentration_grains_m3':round(float(bg)+local,2),'local_plume_grains_m3':round(local,2)})
+        if i==0:
+            for n,h in enumerate(allspots):
+                value=float(plume_at(sx[n:n+1],sy[n:n+1],rx,ry,q[n:n+1],wd['wind_speed'],wd['wind_direction'])[0])
+                if value>1e-12:
+                    contributors.append({'hotspot_id':h.id,'latitude':h.lat,'longitude':h.lon,'distance_m':round(math.hypot(sx[n]-rx[0],sy[n]-ry[0]),1),'contribution_grains_m3':value,'status':h.status,'data_provenance':h.data_provenance})
+    contributors.sort(key=lambda c:c['distance_m'])
+    return {'latitude':latitude,'longitude':longitude,'days':days,'contributing_hotspots':contributors[:10], 'scenario':scenario,'weather_source':w['source'],'data_provenance':request.app.state.model['data_provenance'],'hotspot_data_provenance':sorted({h.data_provenance for h in allspots}),'note':'Модельный городской фон и локальный шлейф могут учитывать источники дважды; результат не измерение и не медицинское заключение.'}
 
 @router.post('/optimizer/calculate')
 def optimizer(payload:OptimizerRequest,db:Session=Depends(get_db)):

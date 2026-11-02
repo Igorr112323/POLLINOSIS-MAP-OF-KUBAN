@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 import math
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from app.core.config import settings
 from app.core.geography import MUNICIPALITIES
 from app.models.tables import Observation, WeatherCache
@@ -32,7 +33,14 @@ async def weather(db, municipality, mode, target):
                     raise ValueError('incomplete weather response')
                 if cached: cached.payload=days; cached.updated_at=datetime.now(timezone.utc)
                 else: db.add(WeatherCache(key=key,payload=days,updated_at=datetime.now(timezone.utc)))
-                db.commit()
+                try:
+                    db.commit()
+                except IntegrityError:
+                    # Concurrent requests for this date may both miss the cache before
+                    # either network call completes. Keep the winner's cache entry.
+                    db.rollback()
+                    if not db.scalar(select(WeatherCache).where(WeatherCache.key == key)):
+                        raise
                 return finish(db,days,'open-meteo-live',target,municipality)
         except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
             db.rollback()

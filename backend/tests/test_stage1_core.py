@@ -112,3 +112,22 @@ def test_live_weather_cached_then_network_failure(client,monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient,'get',failure)
     cached=client.get('/api/v1/weather/forecast',params=params).json()
     assert cached['source']=='open-meteo-cache' and cached['days']==live['days']
+
+def test_simultaneous_live_cache_insert_is_safe(client, monkeypatch):
+    """Another request may populate the same cache while Open-Meteo is in flight."""
+    import httpx
+    from datetime import timedelta, datetime, timezone
+    from app.core.config import settings
+    from app.models.tables import WeatherCache
+    start=date(2026,7,26)
+    dates=[(start+timedelta(days=i)).isoformat() for i in range(14)]
+    payload={'daily':{'time':dates,'temperature_2m_max':[30]*14,'temperature_2m_min':[20]*14,'precipitation_sum':[0]*14,'wind_speed_10m_max':[2]*14,'wind_direction_10m_dominant':[90]*14,'shortwave_radiation_sum':[20]*14},'hourly':{'time':[d+'T12:00' for d in dates],'dew_point_2m':[15]*14}}
+    async def competing_insert(self,url,params):
+        with SessionLocal() as other:
+            other.add(WeatherCache(key=f'Краснодар:live:{start}',payload=[],updated_at=datetime.now(timezone.utc)))
+            other.commit()
+        return httpx.Response(200,json=payload,request=httpx.Request('GET',url))
+    monkeypatch.setattr(settings,'offline',False)
+    monkeypatch.setattr(httpx.AsyncClient,'get',competing_insert)
+    response=client.get('/api/v1/weather/forecast',params={'mode':'live','target_date':start.isoformat()})
+    assert response.status_code==200 and response.json()['source']=='open-meteo-live'

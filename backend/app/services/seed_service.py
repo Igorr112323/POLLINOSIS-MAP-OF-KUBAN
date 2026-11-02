@@ -5,6 +5,8 @@ import numpy as np
 from sqlalchemy import select, func
 from app.models.tables import Observation, WeeklyObservation, Hotspot
 from app.core.geography import DISTRICTS
+from app.core.water_mask import demo_water_exclusion
+from shapely.geometry import shape
 
 def seed(db):
     if db.scalar(select(func.count()).select_from(Observation)):
@@ -36,10 +38,17 @@ def seed(db):
     # Illustrative locations, not mapped infestation boundaries. Squares are constructed
     # with local metric scaling so geometry agrees approximately with area.
     for i in range(189):
-        lat = float(rng.uniform(45.035,45.075) if i%5==0 else rng.uniform(45.035,45.145)); lon = float(rng.uniform(38.79,38.85) if i%5==0 else rng.uniform(38.86,39.14))
+        # Northern inland envelopes avoid the Kuban river and reservoir at coarse scale.
+        # These are synthetic squares, not verified land use or authoritative water masks.
+        envelopes=[(45.105,45.130,38.915,38.965),(45.105,45.135,38.985,39.045),(45.075,45.100,39.065,39.110),(45.070,45.090,38.885,38.925)]
+        lat_min,lat_max,lon_min,lon_max=envelopes[i%len(envelopes)]
         area = float(areas[i]); side = math.sqrt(area*10000)
-        dy = side/111320/2; dx = side/(111320*math.cos(math.radians(lat)))/2
-        geom = {'type':'Polygon','coordinates':[[[lon-dx,lat-dy],[lon+dx,lat-dy],[lon+dx,lat+dy],[lon-dx,lat+dy],[lon-dx,lat-dy]]]}
+        for _ in range(10000):
+            lat=float(rng.uniform(lat_min,lat_max)); lon=float(rng.uniform(lon_min,lon_max))
+            dy = side/111320/2; dx = side/(111320*math.cos(math.radians(lat)))/2
+            geom = {'type':'Polygon','coordinates':[[[lon-dx,lat-dy],[lon+dx,lat-dy],[lon+dx,lat+dy],[lon-dx,lat+dy],[lon-dx,lat-dy]]]}
+            if shape(geom).disjoint(demo_water_exclusion()): break
+        else: raise RuntimeError('Could not generate a polygon outside the demo exclusion zone')
         b04 = float(rng.uniform(.08,.16)); b08 = float(rng.uniform(.35,.65))
         db.add(Hotspot(id=i+1,lat=lat,lon=lon,area_ha=area,geometry=geom,district=DISTRICTS[i%4],landmark=f'Условный участок {i+1}',land_type=['пустырь','промзона','полоса отвода','строительная площадка','пригород'][i%5],b02=float(rng.uniform(.04,.12)),b03=float(rng.uniform(.08,.16)),b04=b04,b08=b08,b11=float(rng.uniform(.15,.3)),status='detected',provenance='synthetic'))
     db.commit()

@@ -39,3 +39,19 @@ def migrate_stage2(engine):
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN data_provenance VARCHAR NOT NULL DEFAULT 'synthetic_demo'"))
                 if table == 'hotspots':
                     conn.execute(text("UPDATE hotspots SET data_provenance='uploaded_dataset' WHERE provenance LIKE 'uploaded_%'"))
+
+
+def migrate_satellite(engine):
+    """Add nullable observation metadata without changing existing datasets."""
+    from sqlalchemy import inspect, text
+    with engine.begin() as conn:
+        inspector = inspect(conn)
+        if 'hotspots' not in inspector.get_table_names():
+            return
+        columns = {c['name'] for c in inspector.get_columns('hotspots')}
+        for name, sqltype in (('scene_id', 'VARCHAR'), ('source_key', 'VARCHAR'), ('observed_ndvi', 'FLOAT')):
+            if name not in columns:
+                conn.execute(text(f'ALTER TABLE hotspots ADD COLUMN {name} {sqltype}'))
+        conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_hotspots_source_key ON hotspots (source_key)'))
+        if 'satellite_scenes' in inspector.get_table_names() and 'band_calibration' not in {c['name'] for c in inspector.get_columns('satellite_scenes')}:
+            conn.execute(text('ALTER TABLE satellite_scenes ADD COLUMN band_calibration JSON'))
