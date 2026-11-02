@@ -14,7 +14,11 @@ on:
       - 'backend/requirements.txt'
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: kuban-snapshot-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   fetch:
@@ -33,12 +37,31 @@ jobs:
         env:
           OFFLINE: 'false'
           PYTHONUNBUFFERED: '1'
-        run: python scripts/fetch_live_kuban_data.py
+        run: python scripts/fetch_live_kuban_data.py --output-dir "$RUNNER_TEMP/kuban-snapshots"
       - name: Upload source snapshots and status, even on partial failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: krasnodar-real-snapshots
-          path: backend/data/real_snapshots/
+          path: ${{ runner.temp }}/kuban-snapshots/
           if-no-files-found: warn
           retention-days: 14
+      - name: Save successful snapshots and manifest to the session branch
+        if: always() && github.ref == 'refs/heads/arena/fc54dd0a-pollinosis-map-of-kuban'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f "$RUNNER_TEMP/kuban-snapshots/manifest.json" ]; then
+            echo "No manifest was produced; preserving existing snapshots."
+            exit 0
+          fi
+          mkdir -p backend/data/real_snapshots
+          cp "$RUNNER_TEMP"/kuban-snapshots/* backend/data/real_snapshots/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f backend/data/real_snapshots/
+          if git diff --cached --quiet; then echo "No snapshot changes."; exit 0; fi
+          git commit -m "Update public Kuban source snapshots"
+          git fetch origin arena/fc54dd0a-pollinosis-map-of-kuban
+          git rebase FETCH_HEAD
+          git push origin HEAD:refs/heads/arena/fc54dd0a-pollinosis-map-of-kuban
