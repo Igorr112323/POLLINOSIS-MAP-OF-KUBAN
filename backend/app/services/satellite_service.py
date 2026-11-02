@@ -28,6 +28,8 @@ from app.models.tables import Hotspot, SatelliteScene, WorkOrder
 BBOX=(38.88,44.98,39.13,45.14)
 STAC='https://earth-search.aws.element84.com/v1/search'
 OVERPASS='https://overpass-api.de/api/interpreter'
+# Public mirrors; the primary may reject shared CI runner IPs.
+OVERPASS_ENDPOINTS=(OVERPASS,'https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter')
 COG_HOSTS={'sentinel-cogs.s3.us-west-2.amazonaws.com','sentinel-cogs.s3.amazonaws.com','earth-search-sentinel-data.s3.us-west-2.amazonaws.com'}
 THUMB_HOSTS=COG_HOSTS | {'earth-search.aws.element84.com'}
 GEOD=Geod(ellps='WGS84')
@@ -117,12 +119,18 @@ def _polygons(element):
 def _area_ha(poly):
     return abs(GEOD.geometry_area_perimeter(poly)[0])/10000
 
-def osm_parcels():
+def osm_parcels(return_endpoint=False):
     bbox='44.98,38.88,45.14,39.13'
     land='brownfield|construction|industrial|railway|grass|meadow'
     natural='scrub|grassland'
     query=f'''[out:json][timeout:75];(way["landuse"~"^({land})$"]({bbox});relation["landuse"~"^({land})$"]({bbox});way["natural"~"^({natural})$"]({bbox});relation["natural"~"^({natural})$"]({bbox});way["landuse"="forest"]({bbox});relation["landuse"="forest"]({bbox});way["natural"="wood"]({bbox});relation["natural"="wood"]({bbox});way["leisure"="park"]({bbox});relation["leisure"="park"]({bbox}););out geom;'''
-    data=_json_post(OVERPASS,data={'data':query}); lands=[]; forests=[]; bounds=box(*BBOX)
+    errors=[]; data=None; endpoint=None
+    for candidate in OVERPASS_ENDPOINTS:
+        try:
+            data=_json_post(candidate,data={'data':query});endpoint=candidate;break
+        except SatelliteError as e:errors.append(str(e))
+    if data is None:raise SatelliteError('Все Overpass-серверы недоступны: '+'; '.join(errors))
+    lands=[]; forests=[]; bounds=box(*BBOX)
     for el in data.get('elements',[]):
         try:
             tags=el.get('tags',{}); polys=_polygons(el)
@@ -135,7 +143,8 @@ def osm_parcels():
         except (KeyError,TypeError,ValueError): continue
     forest=unary_union(forests) if forests else None
     # Exclude whole parcels that intersect mapped woods/parks, not just their centroids.
-    return [p for p in lands if forest is None or p['geometry'].disjoint(forest)]
+    filtered=[p for p in lands if forest is None or p['geometry'].disjoint(forest)]
+    return (filtered,endpoint) if return_endpoint else filtered
 
 def read_scene(urls):
     try:

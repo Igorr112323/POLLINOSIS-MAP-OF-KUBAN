@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT=Path(__file__).resolve().parents[1]
+INITIAL_CWD=Path.cwd()
 os.chdir(ROOT/'backend')
 sys.path.insert(0,str(ROOT/'backend'))
 sys.path.insert(0,str(ROOT/'scripts'))
@@ -97,7 +98,7 @@ def import_data(db,scene,candidates,weather_windows):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('snapshot_dir',type=Path);p.add_argument('--apply',action='store_true',help='Actually write to DATABASE_URL');p.add_argument('--allow-partial',action='store_true',help='Import successful source even if the other is absent')
-    args=p.parse_args();folder=args.snapshot_dir.resolve()
+    args=p.parse_args();folder=(INITIAL_CWD/args.snapshot_dir).resolve()
     try:
         docs=[]
         for name in ('krasnodar_sentinel2_hotspots.geojson','krasnodar_openmeteo.json'):

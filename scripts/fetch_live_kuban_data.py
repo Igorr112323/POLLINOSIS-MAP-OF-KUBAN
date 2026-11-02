@@ -72,7 +72,7 @@ def fetch_weather(today=None):
         'note':'Прогноз и ERA5 — модельные данные Open-Meteo, а не непосредственные измерения на месте.'}
 
 def fetch_satellite():
-    scene,urls=find_scene(); parcels=osm_parcels(); arrays,trans,crs=read_scene(urls)
+    scene,urls=find_scene(); parcels,osm_endpoint=osm_parcels(return_endpoint=True); arrays,trans,crs=read_scene(urls)
     candidates=classify_parcels(parcels,arrays,trans,crs,scene['calibration'])
     features=[]
     for c in candidates:
@@ -82,7 +82,7 @@ def fetch_satellite():
             'scene_id':scene['scene_id'],'data_provenance':'sentinel2_osm_live'}})
     return {'type':'FeatureCollection','schema_version':1,'retrieved_at':datetime.now(timezone.utc).isoformat(),
         'scene':scene,'asset_urls':urls,'bbox':list(BBOX),'osm_parcels':len(parcels),'features':features,
-        'sources':{'geometry':'OpenStreetMap via Overpass API; © OpenStreetMap contributors, ODbL','imagery':'Copernicus Sentinel-2 L2A via Earth Search'},
+        'osm_endpoint':osm_endpoint,'sources':{'geometry':'OpenStreetMap via Overpass API; © OpenStreetMap contributors, ODbL','imagery':'Copernicus Sentinel-2 L2A via Earth Search'},
         'note':'NDVI показывает растительность; вид растения и присутствие амброзии не установлены. Нужна полевая проверка.'}
 
 def atomic_json(path, data):
