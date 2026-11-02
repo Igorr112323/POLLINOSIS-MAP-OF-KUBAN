@@ -1,0 +1,11 @@
+
+> pollinoz-terminal@1.0.0 test:e2e
+> node tests/e2e.cjs
+
+PASS 01 · GIS features and inspector
+PASS 02 · optimizer, batch, status, photos, geofence and delta
+PASS 01→02 · closure reflected on map
+PASS 03→01 · patient subscription, calendar, contributing hotspot focus
+PASS 03 · clinical dashboard and alerts dispatch
+PASS 04→01 · report, feed, CSV import, reset, GeoJSON and map refresh
+All end-to-end DOM/API checks passed (isolated database).

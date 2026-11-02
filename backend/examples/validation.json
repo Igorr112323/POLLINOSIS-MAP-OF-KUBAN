@@ -1,0 +1,1082 @@
+{
+  "data_provenance": "synthetic_demo",
+  "weather_feature_note": "Missing weather and gaps in thermal accumulation use synthetic climatology; weekly temperature values are repeated across the week for GDD.",
+  "training_years": [
+    2023
+  ],
+  "evaluation_years": [
+    2024,
+    2025,
+    2026
+  ],
+  "weekly_count": 109,
+  "spearman_rho": 0.851275033979934,
+  "p_value": 7.833095077234862e-24,
+  "roc_auc": 0.9993025327305424,
+  "recall": 0.9798994974874372,
+  "fpr": 0.01560758082497213,
+  "clinical_probability_threshold": 0.25,
+  "blind_2024_accuracy": 0.9863387978142076,
+  "start_window_accuracy": 1.0,
+  "start_dates": [
+    {
+      "year": 2024,
+      "observed": "2024-08-10",
+      "predicted": "2024-08-11",
+      "error_days": 1
+    },
+    {
+      "year": 2025,
+      "observed": "2025-08-10",
+      "predicted": "2025-08-11",
+      "error_days": 1
+    },
+    {
+      "year": 2026,
+      "observed": "2026-08-09",
+      "predicted": "2026-08-11",
+      "error_days": 2
+    }
+  ],
+  "weekly_series": [
+    {
+      "date": "2023-05-27",
+      "year": 2023,
+      "week": null,
+      "observed": 1.06,
+      "predicted": 1.06,
+      "evaluation": false
+    },
+    {
+      "date": "2023-06-03",
+      "year": 2023,
+      "week": null,
+      "observed": 0.08,
+      "predicted": 1.12,
+      "evaluation": false
+    },
+    {
+      "date": "2023-06-10",
+      "year": 2023,
+      "week": null,
+      "observed": 0.63,
+      "predicted": 1.12,
+      "evaluation": false
+    },
+    {
+      "date": "2023-06-17",
+      "year": 2023,
+      "week": null,
+      "observed": 0.74,
+      "predicted": 1.07,
+      "evaluation": false
+    },
+    {
+      "date": "2023-06-24",
+      "year": 2023,
+      "week": null,
+      "observed": 0.8,
+      "predicted": 1.12,
+      "evaluation": false
+    },
+    {
+      "date": "2023-07-01",
+      "year": 2023,
+      "week": 1,
+      "observed": 1.31,
+      "predicted": 1.07,
+      "evaluation": false
+    },
+    {
+      "date": "2023-07-08",
+      "year": 2023,
+      "week": 2,
+      "observed": 0.25,
+      "predicted": 1.07,
+      "evaluation": false
+    },
+    {
+      "date": "2023-07-15",
+      "year": 2023,
+      "week": 3,
+      "observed": 0.35,
+      "predicted": 1.07,
+      "evaluation": false
+    },
+    {
+      "date": "2023-07-22",
+      "year": 2023,
+      "week": 4,
+      "observed": 0.58,
+      "predicted": 1.24,
+      "evaluation": false
+    },
+    {
+      "date": "2023-07-29",
+      "year": 2023,
+      "week": 5,
+      "observed": 0.32,
+      "predicted": 1.08,
+      "evaluation": false
+    },
+    {
+      "date": "2023-08-05",
+      "year": 2023,
+      "week": 6,
+      "observed": 11.73,
+      "predicted": 10.65,
+      "evaluation": false
+    },
+    {
+      "date": "2023-08-12",
+      "year": 2023,
+      "week": 7,
+      "observed": 159.91,
+      "predicted": 140.91,
+      "evaluation": false
+    },
+    {
+      "date": "2023-08-19",
+      "year": 2023,
+      "week": 8,
+      "observed": 518.3,
+      "predicted": 254.12,
+      "evaluation": false
+    },
+    {
+      "date": "2023-08-26",
+      "year": 2023,
+      "week": 9,
+      "observed": 315.96,
+      "predicted": 246.19,
+      "evaluation": false
+    },
+    {
+      "date": "2023-09-02",
+      "year": 2023,
+      "week": 10,
+      "observed": 422.56,
+      "predicted": 218.01,
+      "evaluation": false
+    },
+    {
+      "date": "2023-09-09",
+      "year": 2023,
+      "week": 11,
+      "observed": 292.55,
+      "predicted": 226.8,
+      "evaluation": false
+    },
+    {
+      "date": "2023-09-16",
+      "year": 2023,
+      "week": 12,
+      "observed": 225.42,
+      "predicted": 195.27,
+      "evaluation": false
+    },
+    {
+      "date": "2023-09-23",
+      "year": 2023,
+      "week": 13,
+      "observed": 154.43,
+      "predicted": 146.89,
+      "evaluation": false
+    },
+    {
+      "date": "2023-09-30",
+      "year": 2023,
+      "week": 14,
+      "observed": 59.39,
+      "predicted": 45.71,
+      "evaluation": false
+    },
+    {
+      "date": "2023-10-07",
+      "year": 2023,
+      "week": 15,
+      "observed": 18.45,
+      "predicted": 18.62,
+      "evaluation": false
+    },
+    {
+      "date": "2023-10-14",
+      "year": 2023,
+      "week": 16,
+      "observed": 10.79,
+      "predicted": 10.08,
+      "evaluation": false
+    },
+    {
+      "date": "2023-10-21",
+      "year": 2023,
+      "week": 17,
+      "observed": 4.5,
+      "predicted": 4.42,
+      "evaluation": false
+    },
+    {
+      "date": "2023-10-28",
+      "year": 2023,
+      "week": 18,
+      "observed": 1.27,
+      "predicted": 1.82,
+      "evaluation": false
+    },
+    {
+      "date": "2023-11-04",
+      "year": 2023,
+      "week": null,
+      "observed": 1.38,
+      "predicted": 1.97,
+      "evaluation": false
+    },
+    {
+      "date": "2023-11-11",
+      "year": 2023,
+      "week": null,
+      "observed": 1.18,
+      "predicted": 2.17,
+      "evaluation": false
+    },
+    {
+      "date": "2023-11-18",
+      "year": 2023,
+      "week": null,
+      "observed": 1.4,
+      "predicted": 1.72,
+      "evaluation": false
+    },
+    {
+      "date": "2023-11-25",
+      "year": 2023,
+      "week": null,
+      "observed": 0.67,
+      "predicted": 1.77,
+      "evaluation": false
+    },
+    {
+      "date": "2023-12-02",
+      "year": 2023,
+      "week": null,
+      "observed": 0.17,
+      "predicted": 1.72,
+      "evaluation": false
+    },
+    {
+      "date": "2024-05-27",
+      "year": 2024,
+      "week": null,
+      "observed": 0.59,
+      "predicted": 1.06,
+      "evaluation": true
+    },
+    {
+      "date": "2024-06-03",
+      "year": 2024,
+      "week": null,
+      "observed": 0.43,
+      "predicted": 1.12,
+      "evaluation": true
+    },
+    {
+      "date": "2024-06-10",
+      "year": 2024,
+      "week": null,
+      "observed": 1.29,
+      "predicted": 1.09,
+      "evaluation": true
+    },
+    {
+      "date": "2024-06-17",
+      "year": 2024,
+      "week": null,
+      "observed": 0.53,
+      "predicted": 1.12,
+      "evaluation": true
+    },
+    {
+      "date": "2024-06-24",
+      "year": 2024,
+      "week": null,
+      "observed": 0.62,
+      "predicted": 1.18,
+      "evaluation": true
+    },
+    {
+      "date": "2024-07-01",
+      "year": 2024,
+      "week": 1,
+      "observed": 0.41,
+      "predicted": 1.12,
+      "evaluation": true
+    },
+    {
+      "date": "2024-07-08",
+      "year": 2024,
+      "week": 2,
+      "observed": 0.66,
+      "predicted": 1.13,
+      "evaluation": true
+    },
+    {
+      "date": "2024-07-15",
+      "year": 2024,
+      "week": 3,
+      "observed": 0.51,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2024-07-22",
+      "year": 2024,
+      "week": 4,
+      "observed": 2.08,
+      "predicted": 1.13,
+      "evaluation": true
+    },
+    {
+      "date": "2024-07-29",
+      "year": 2024,
+      "week": 5,
+      "observed": 1.22,
+      "predicted": 1.15,
+      "evaluation": true
+    },
+    {
+      "date": "2024-08-05",
+      "year": 2024,
+      "week": 6,
+      "observed": 36.86,
+      "predicted": 9.54,
+      "evaluation": true
+    },
+    {
+      "date": "2024-08-12",
+      "year": 2024,
+      "week": 7,
+      "observed": 314.54,
+      "predicted": 106.55,
+      "evaluation": true
+    },
+    {
+      "date": "2024-08-19",
+      "year": 2024,
+      "week": 8,
+      "observed": 372.5,
+      "predicted": 248.05,
+      "evaluation": true
+    },
+    {
+      "date": "2024-08-26",
+      "year": 2024,
+      "week": 9,
+      "observed": 385.53,
+      "predicted": 239.12,
+      "evaluation": true
+    },
+    {
+      "date": "2024-09-02",
+      "year": 2024,
+      "week": 10,
+      "observed": 285.51,
+      "predicted": 213.52,
+      "evaluation": true
+    },
+    {
+      "date": "2024-09-09",
+      "year": 2024,
+      "week": 11,
+      "observed": 368.55,
+      "predicted": 224.98,
+      "evaluation": true
+    },
+    {
+      "date": "2024-09-16",
+      "year": 2024,
+      "week": 12,
+      "observed": 206.39,
+      "predicted": 179.39,
+      "evaluation": true
+    },
+    {
+      "date": "2024-09-23",
+      "year": 2024,
+      "week": 13,
+      "observed": 76.58,
+      "predicted": 139.62,
+      "evaluation": true
+    },
+    {
+      "date": "2024-09-30",
+      "year": 2024,
+      "week": 14,
+      "observed": 69.15,
+      "predicted": 70.96,
+      "evaluation": true
+    },
+    {
+      "date": "2024-10-07",
+      "year": 2024,
+      "week": 15,
+      "observed": 16.58,
+      "predicted": 35.35,
+      "evaluation": true
+    },
+    {
+      "date": "2024-10-14",
+      "year": 2024,
+      "week": 16,
+      "observed": 7.15,
+      "predicted": 16.15,
+      "evaluation": true
+    },
+    {
+      "date": "2024-10-21",
+      "year": 2024,
+      "week": 17,
+      "observed": 2.27,
+      "predicted": 6.79,
+      "evaluation": true
+    },
+    {
+      "date": "2024-10-28",
+      "year": 2024,
+      "week": 18,
+      "observed": 1.12,
+      "predicted": 3.51,
+      "evaluation": true
+    },
+    {
+      "date": "2024-11-04",
+      "year": 2024,
+      "week": null,
+      "observed": 0.31,
+      "predicted": 2.63,
+      "evaluation": true
+    },
+    {
+      "date": "2024-11-11",
+      "year": 2024,
+      "week": null,
+      "observed": 0.27,
+      "predicted": 2.13,
+      "evaluation": true
+    },
+    {
+      "date": "2024-11-18",
+      "year": 2024,
+      "week": null,
+      "observed": 1.35,
+      "predicted": 2.57,
+      "evaluation": true
+    },
+    {
+      "date": "2024-11-25",
+      "year": 2024,
+      "week": null,
+      "observed": 0.75,
+      "predicted": 2.14,
+      "evaluation": true
+    },
+    {
+      "date": "2025-05-27",
+      "year": 2025,
+      "week": null,
+      "observed": 1.97,
+      "predicted": 1.04,
+      "evaluation": true
+    },
+    {
+      "date": "2025-06-03",
+      "year": 2025,
+      "week": null,
+      "observed": 0.28,
+      "predicted": 1.17,
+      "evaluation": true
+    },
+    {
+      "date": "2025-06-10",
+      "year": 2025,
+      "week": null,
+      "observed": 0.04,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2025-06-17",
+      "year": 2025,
+      "week": null,
+      "observed": 1.19,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2025-06-24",
+      "year": 2025,
+      "week": null,
+      "observed": 0.15,
+      "predicted": 1.06,
+      "evaluation": true
+    },
+    {
+      "date": "2025-07-01",
+      "year": 2025,
+      "week": 1,
+      "observed": 1.05,
+      "predicted": 1.06,
+      "evaluation": true
+    },
+    {
+      "date": "2025-07-08",
+      "year": 2025,
+      "week": 2,
+      "observed": 1.2,
+      "predicted": 1.14,
+      "evaluation": true
+    },
+    {
+      "date": "2025-07-15",
+      "year": 2025,
+      "week": 3,
+      "observed": 0.85,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2025-07-22",
+      "year": 2025,
+      "week": 4,
+      "observed": 1.33,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2025-07-29",
+      "year": 2025,
+      "week": 5,
+      "observed": 0.43,
+      "predicted": 1.08,
+      "evaluation": true
+    },
+    {
+      "date": "2025-08-05",
+      "year": 2025,
+      "week": 6,
+      "observed": 17.37,
+      "predicted": 6.16,
+      "evaluation": true
+    },
+    {
+      "date": "2025-08-12",
+      "year": 2025,
+      "week": 7,
+      "observed": 241.93,
+      "predicted": 98.22,
+      "evaluation": true
+    },
+    {
+      "date": "2025-08-19",
+      "year": 2025,
+      "week": 8,
+      "observed": 479.97,
+      "predicted": 220.14,
+      "evaluation": true
+    },
+    {
+      "date": "2025-08-26",
+      "year": 2025,
+      "week": 9,
+      "observed": 471.5,
+      "predicted": 246.16,
+      "evaluation": true
+    },
+    {
+      "date": "2025-09-02",
+      "year": 2025,
+      "week": 10,
+      "observed": 458.97,
+      "predicted": 224.98,
+      "evaluation": true
+    },
+    {
+      "date": "2025-09-09",
+      "year": 2025,
+      "week": 11,
+      "observed": 515.7,
+      "predicted": 222.95,
+      "evaluation": true
+    },
+    {
+      "date": "2025-09-16",
+      "year": 2025,
+      "week": 12,
+      "observed": 259.43,
+      "predicted": 188.21,
+      "evaluation": true
+    },
+    {
+      "date": "2025-09-23",
+      "year": 2025,
+      "week": 13,
+      "observed": 125.33,
+      "predicted": 151.73,
+      "evaluation": true
+    },
+    {
+      "date": "2025-09-30",
+      "year": 2025,
+      "week": 14,
+      "observed": 44.14,
+      "predicted": 72.68,
+      "evaluation": true
+    },
+    {
+      "date": "2025-10-07",
+      "year": 2025,
+      "week": 15,
+      "observed": 16.68,
+      "predicted": 39.79,
+      "evaluation": true
+    },
+    {
+      "date": "2025-10-14",
+      "year": 2025,
+      "week": 16,
+      "observed": 6.45,
+      "predicted": 16.37,
+      "evaluation": true
+    },
+    {
+      "date": "2025-10-21",
+      "year": 2025,
+      "week": 17,
+      "observed": 2.69,
+      "predicted": 8.89,
+      "evaluation": true
+    },
+    {
+      "date": "2025-10-28",
+      "year": 2025,
+      "week": 18,
+      "observed": 1.4,
+      "predicted": 2.57,
+      "evaluation": true
+    },
+    {
+      "date": "2025-11-04",
+      "year": 2025,
+      "week": null,
+      "observed": 1.25,
+      "predicted": 3.72,
+      "evaluation": true
+    },
+    {
+      "date": "2025-11-11",
+      "year": 2025,
+      "week": null,
+      "observed": 1.45,
+      "predicted": 2.66,
+      "evaluation": true
+    },
+    {
+      "date": "2025-11-18",
+      "year": 2025,
+      "week": null,
+      "observed": 1.02,
+      "predicted": 2.5,
+      "evaluation": true
+    },
+    {
+      "date": "2025-11-25",
+      "year": 2025,
+      "week": null,
+      "observed": 0.15,
+      "predicted": 2.49,
+      "evaluation": true
+    },
+    {
+      "date": "2026-05-27",
+      "year": 2026,
+      "week": null,
+      "observed": 0.6,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2026-06-03",
+      "year": 2026,
+      "week": null,
+      "observed": 1.47,
+      "predicted": 1.16,
+      "evaluation": true
+    },
+    {
+      "date": "2026-06-10",
+      "year": 2026,
+      "week": null,
+      "observed": 0.41,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2026-06-17",
+      "year": 2026,
+      "week": null,
+      "observed": 0.57,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2026-06-24",
+      "year": 2026,
+      "week": null,
+      "observed": 0.94,
+      "predicted": 1.23,
+      "evaluation": true
+    },
+    {
+      "date": "2026-07-01",
+      "year": 2026,
+      "week": 1,
+      "observed": 0.55,
+      "predicted": 1.17,
+      "evaluation": true
+    },
+    {
+      "date": "2026-07-08",
+      "year": 2026,
+      "week": 2,
+      "observed": 1.48,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2026-07-15",
+      "year": 2026,
+      "week": 3,
+      "observed": 0.62,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2026-07-22",
+      "year": 2026,
+      "week": 4,
+      "observed": 0.65,
+      "predicted": 1.07,
+      "evaluation": true
+    },
+    {
+      "date": "2026-07-29",
+      "year": 2026,
+      "week": 5,
+      "observed": 0.04,
+      "predicted": 1.18,
+      "evaluation": true
+    },
+    {
+      "date": "2026-08-05",
+      "year": 2026,
+      "week": 6,
+      "observed": 15.05,
+      "predicted": 6.16,
+      "evaluation": true
+    },
+    {
+      "date": "2026-08-12",
+      "year": 2026,
+      "week": 7,
+      "observed": 214.71,
+      "predicted": 98.69,
+      "evaluation": true
+    },
+    {
+      "date": "2026-08-19",
+      "year": 2026,
+      "week": 8,
+      "observed": 355.64,
+      "predicted": 226.9,
+      "evaluation": true
+    },
+    {
+      "date": "2026-08-26",
+      "year": 2026,
+      "week": 9,
+      "observed": 274.3,
+      "predicted": 265.58,
+      "evaluation": true
+    },
+    {
+      "date": "2026-09-02",
+      "year": 2026,
+      "week": 10,
+      "observed": 379.14,
+      "predicted": 232.13,
+      "evaluation": true
+    },
+    {
+      "date": "2026-09-09",
+      "year": 2026,
+      "week": 11,
+      "observed": 266.53,
+      "predicted": 215.11,
+      "evaluation": true
+    },
+    {
+      "date": "2026-09-16",
+      "year": 2026,
+      "week": 12,
+      "observed": 142.2,
+      "predicted": 192.76,
+      "evaluation": true
+    },
+    {
+      "date": "2026-09-23",
+      "year": 2026,
+      "week": 13,
+      "observed": 155.08,
+      "predicted": 148.67,
+      "evaluation": true
+    },
+    {
+      "date": "2026-09-30",
+      "year": 2026,
+      "week": 14,
+      "observed": 66.87,
+      "predicted": 84.76,
+      "evaluation": true
+    },
+    {
+      "date": "2026-10-07",
+      "year": 2026,
+      "week": 15,
+      "observed": 25.32,
+      "predicted": 46.83,
+      "evaluation": true
+    },
+    {
+      "date": "2026-10-14",
+      "year": 2026,
+      "week": 16,
+      "observed": 11.83,
+      "predicted": 23.1,
+      "evaluation": true
+    },
+    {
+      "date": "2026-10-21",
+      "year": 2026,
+      "week": 17,
+      "observed": 2.79,
+      "predicted": 9.88,
+      "evaluation": true
+    },
+    {
+      "date": "2026-10-28",
+      "year": 2026,
+      "week": 18,
+      "observed": 1.5,
+      "predicted": 3.17,
+      "evaluation": true
+    },
+    {
+      "date": "2026-11-04",
+      "year": 2026,
+      "week": null,
+      "observed": 1.37,
+      "predicted": 2.53,
+      "evaluation": true
+    },
+    {
+      "date": "2026-11-11",
+      "year": 2026,
+      "week": null,
+      "observed": 0.41,
+      "predicted": 2.83,
+      "evaluation": true
+    },
+    {
+      "date": "2026-11-18",
+      "year": 2026,
+      "week": null,
+      "observed": 1.06,
+      "predicted": 2.54,
+      "evaluation": true
+    },
+    {
+      "date": "2026-11-25",
+      "year": 2026,
+      "week": null,
+      "observed": 1.5,
+      "predicted": 2.49,
+      "evaluation": true
+    }
+  ],
+  "roc_curve": [
+    {
+      "fpr": 0.0,
+      "tpr": 0.0,
+      "threshold": null
+    },
+    {
+      "fpr": 0.0,
+      "tpr": 0.5778894472361809,
+      "threshold": 0.9753468868477905
+    },
+    {
+      "fpr": 0.0,
+      "tpr": 0.5829145728643216,
+      "threshold": 0.97489307942105
+    },
+    {
+      "fpr": 0.0,
+      "tpr": 0.8492462311557789,
+      "threshold": 0.9734557975152852
+    },
+    {
+      "fpr": 0.0,
+      "tpr": 0.8693467336683417,
+      "threshold": 0.9678987128276738
+    },
+    {
+      "fpr": 0.004459308807134894,
+      "tpr": 0.9396984924623115,
+      "threshold": 0.9270148442161449
+    },
+    {
+      "fpr": 0.004459308807134894,
+      "tpr": 0.9698492462311558,
+      "threshold": 0.9063664401799056
+    },
+    {
+      "fpr": 0.005574136008918618,
+      "tpr": 0.9698492462311558,
+      "threshold": 0.5701627505517234
+    },
+    {
+      "fpr": 0.005574136008918618,
+      "tpr": 0.9748743718592965,
+      "threshold": 0.5584042215996298
+    },
+    {
+      "fpr": 0.010033444816053512,
+      "tpr": 0.9798994974874372,
+      "threshold": 0.4783166829569308
+    },
+    {
+      "fpr": 0.013377926421404682,
+      "tpr": 0.9798994974874372,
+      "threshold": 0.4497769864807445
+    },
+    {
+      "fpr": 0.01560758082497213,
+      "tpr": 0.9798994974874372,
+      "threshold": 0.41133570405485415
+    },
+    {
+      "fpr": 0.01560758082497213,
+      "tpr": 0.9849246231155779,
+      "threshold": 0.19315159447296554
+    },
+    {
+      "fpr": 0.016722408026755852,
+      "tpr": 0.9949748743718593,
+      "threshold": 0.18160525314495368
+    },
+    {
+      "fpr": 0.022296544035674472,
+      "tpr": 1.0,
+      "threshold": 0.18109824550431022
+    },
+    {
+      "fpr": 0.03567447045707915,
+      "tpr": 1.0,
+      "threshold": 0.09278298433111662
+    },
+    {
+      "fpr": 0.0379041248606466,
+      "tpr": 1.0,
+      "threshold": 0.08883482483380196
+    },
+    {
+      "fpr": 0.03901895206243032,
+      "tpr": 1.0,
+      "threshold": 0.060192744847672244
+    },
+    {
+      "fpr": 0.14827201783723523,
+      "tpr": 1.0,
+      "threshold": 0.05740789238907643
+    },
+    {
+      "fpr": 0.1505016722408027,
+      "tpr": 1.0,
+      "threshold": 0.05487398604451082
+    },
+    {
+      "fpr": 0.15496098104793757,
+      "tpr": 1.0,
+      "threshold": 0.0515031279591122
+    },
+    {
+      "fpr": 0.19286510590858416,
+      "tpr": 1.0,
+      "threshold": 0.037023761208307186
+    },
+    {
+      "fpr": 0.24303232998885171,
+      "tpr": 1.0,
+      "threshold": 0.03674003118874057
+    },
+    {
+      "fpr": 0.24526198439241917,
+      "tpr": 1.0,
+      "threshold": 0.03314191487260582
+    },
+    {
+      "fpr": 0.26755852842809363,
+      "tpr": 1.0,
+      "threshold": 0.02351149816221694
+    },
+    {
+      "fpr": 0.431438127090301,
+      "tpr": 1.0,
+      "threshold": 0.005091833808975356
+    },
+    {
+      "fpr": 0.4336677814938685,
+      "tpr": 1.0,
+      "threshold": 0.0049911655970433936
+    },
+    {
+      "fpr": 0.4760312151616499,
+      "tpr": 1.0,
+      "threshold": 0.004489828601043535
+    },
+    {
+      "fpr": 0.48606465997770343,
+      "tpr": 1.0,
+      "threshold": 0.00427404464160347
+    },
+    {
+      "fpr": 0.8606465997770345,
+      "tpr": 1.0,
+      "threshold": 0.004029697397326539
+    },
+    {
+      "fpr": 0.8717948717948718,
+      "tpr": 1.0,
+      "threshold": 0.0039499448072436195
+    },
+    {
+      "fpr": 0.8773690078037905,
+      "tpr": 1.0,
+      "threshold": 0.0037683600614535425
+    },
+    {
+      "fpr": 1.0,
+      "tpr": 1.0,
+      "threshold": 0.003552819664989727
+    }
+  ]
+}
