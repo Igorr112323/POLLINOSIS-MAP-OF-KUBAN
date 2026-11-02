@@ -23,5 +23,14 @@
       "file": "krasnodar_openmeteo.json"
     }
   },
-  "finished_at": "2026-11-02T23:29:42.792967+00:00"
+  "finished_at": "2026-11-02T23:29:42.792967+00:00",
+  "published_files": {
+    "sentinel2_and_water": {
+      "run_id": 41544753480,
+      "reason": "Сохранены снимок и опциональное обогащение OSM из предыдущего успешного прогона; последний прогон Sentinel-2 успешен, но Overpass недоступен."
+    },
+    "openmeteo": {
+      "run_id": 41545514337
+    }
+  }
 }
