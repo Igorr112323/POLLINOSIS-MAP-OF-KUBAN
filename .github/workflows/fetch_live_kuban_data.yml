@@ -11,6 +11,7 @@ on:
       - '.github/workflows/fetch_live_kuban_data.yml'
       - 'scripts/fetch_live_kuban_data.py'
       - 'backend/app/services/satellite_service.py'
+      - 'backend/app/services/raster_screening.py'
       - 'backend/requirements.txt'
 
 permissions:

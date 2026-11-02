@@ -29,7 +29,7 @@ BBOX=(38.88,44.98,39.13,45.14)
 STAC='https://earth-search.aws.element84.com/v1/search'
 OVERPASS='https://overpass-api.de/api/interpreter'
 # Public mirrors; the primary may reject shared CI runner IPs.
-OVERPASS_ENDPOINTS=(OVERPASS,'https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter')
+OVERPASS_ENDPOINTS=('https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.private.coffee/api/interpreter',OVERPASS,'https://overpass.kumi.systems/api/interpreter')
 COG_HOSTS={'sentinel-cogs.s3.us-west-2.amazonaws.com','sentinel-cogs.s3.amazonaws.com','earth-search-sentinel-data.s3.us-west-2.amazonaws.com'}
 THUMB_HOSTS=COG_HOSTS | {'earth-search.aws.element84.com'}
 GEOD=Geod(ellps='WGS84')
@@ -44,9 +44,9 @@ def _trusted_url(url, hosts):
         raise SatelliteError('Каталог вернул неподдерживаемый адрес спутникового файла')
     return url
 
-def _json_post(url, **kwargs):
+def _json_post(url, timeout=90, **kwargs):
     try:
-        with httpx.Client(timeout=httpx.Timeout(90,connect=10),follow_redirects=False) as client:
+        with httpx.Client(timeout=httpx.Timeout(timeout,connect=10),follow_redirects=False) as client:
             with client.stream('POST',url,**kwargs) as response:
                 if response.is_error:
                     response.read()
@@ -66,19 +66,19 @@ def _season(today):
     start=date(year,7,25); end=min(today,date(year,8,31))
     return f'{start.isoformat()}T00:00:00Z/{end.isoformat()}T23:59:59Z'
 
-def find_scene(today=None):
-    window=_season(today or date.today())
-    data=_json_post(STAC,json={'collections':['sentinel-2-l2a'],'bbox':list(BBOX),'datetime':window,'query':{'eo:cloud_cover':{'lt':20}},'limit':100,'sortby':[{'field':'properties.datetime','direction':'desc'}]})
+def find_scene(today=None, window=None, max_cloud=20):
+    window=window or _season(today or date.today())
+    data=_json_post(STAC,json={'collections':['sentinel-2-l2a'],'bbox':list(BBOX),'datetime':window,'query':{'eo:cloud_cover':{'lt':max_cloud}},'limit':100,'sortby':[{'field':'properties.datetime','direction':'desc'}]})
     features=data.get('features',[]); candidates=[]; area=box(*BBOX)
     for f in features:
         try:
             props=f['properties']; cloud=float(props['eo:cloud_cover']); assets=f['assets']; geom=shape(f['geometry'])
-            if not math.isfinite(cloud) or not 0<=cloud<20 or not all(k in assets for k in ('red','nir','swir16','scl')): continue
+            if not math.isfinite(cloud) or not 0<=cloud<max_cloud or not all(k in assets for k in ('red','nir','swir16','scl')): continue
             coverage=geom.intersection(area).area/area.area
             if coverage<=0: continue
             candidates.append((coverage,str(props['datetime']),f))
         except (KeyError,TypeError,ValueError): continue
-    if not candidates: raise SatelliteError('Не найдена сцена Sentinel-2 L2A с нужными каналами и облачностью ниже 20% за сезон '+window[:10])
+    if not candidates: raise SatelliteError(f'Не найдена сцена Sentinel-2 L2A с нужными каналами и облачностью ниже {max_cloud}% за сезон '+window[:10])
     # Prefer complete coverage, otherwise explicitly report the partial coverage.
     candidates.sort(key=lambda x:(x[0]>=.999,x[1],x[0]),reverse=True)
     coverage,_,f=candidates[0]; props=f['properties']; assets=f['assets']
@@ -146,16 +146,23 @@ def osm_parcels(return_endpoint=False):
     filtered=[p for p in lands if forest is None or p['geometry'].disjoint(forest)]
     return (filtered,endpoint) if return_endpoint else filtered
 
-def read_scene(urls):
+def read_scene(urls, resolution=None, grid=None):
     try:
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR',GDAL_HTTP_TIMEOUT='30',GDAL_HTTP_MAX_RETRY='1',CPL_VSIL_CURL_ALLOWED_EXTENSIONS='.tif,.tiff'):
             with rasterio.open(urls['red']) as src:
                 if not src.crs: raise SatelliteError('У сцены отсутствует система координат')
                 crs=src.crs; left,bottom,right,top=transform_bounds('EPSG:4326',crs,*BBOX,densify_pts=21)
-            trans=from_bounds(left,bottom,right,top,512,512)
+            if grid is not None:
+                trans,crs,height,width=grid
+            else:
+                width=height=512 if resolution is None else None
+                if resolution is not None:
+                    width=max(1,math.ceil((right-left)/resolution));height=max(1,math.ceil((top-bottom)/resolution))
+                    if width*height>6_000_000:raise SatelliteError('Окно спутникового снимка слишком велико')
+                trans=from_bounds(left,bottom,right,top,width,height)
             arrays={}
             for key,url in urls.items():
-                with rasterio.open(url) as src, WarpedVRT(src,crs=crs,transform=trans,width=512,height=512,resampling=Resampling.nearest if key=='scl' else Resampling.bilinear) as vrt:
+                with rasterio.open(url) as src, WarpedVRT(src,crs=crs,transform=trans,width=width,height=height,resampling=Resampling.nearest if key=='scl' else Resampling.bilinear) as vrt:
                     arrays[key]=vrt.read(1,masked=True).astype('float32').filled(np.nan)
         return arrays,trans,crs
     except (rasterio.errors.RasterioError, OSError, ValueError) as e:
@@ -234,7 +241,7 @@ def save_candidates(db,candidates,origin,scene=None,commit=True):
         if existing and (existing.status!='detected' or db.scalar(select(WorkOrder.id).where(WorkOrder.hotspot_id==existing.id).limit(1)) is not None):
             skipped+=1;continue
         p=c['geometry'];center=p.centroid; nearest=min(NEIGHBORHOODS,key=lambda n:(n[2]-center.y)**2+(n[3]-center.x)**2)
-        values=dict(lat=center.y,lon=center.x,area_ha=c['area_ha'],geometry=mapping(p),district=nearest[1],landmark=c['name'],land_type=c['land_type'],b02=0.,b03=0.,b04=c['b04'],b08=c['b08'],b11=c['b11'] if c['b11'] is not None else 0.,status='detected',data_provenance=origin,provenance='sentinel2_osm_missing_b02_missing_b03' if scene else 'uploaded_geotiff_missing_b02_missing_b03_missing_b11',scene_id=scene['scene_id'] if scene else None,source_key=key,observed_ndvi=c['ndvi'])
+        values=dict(lat=center.y,lon=center.x,area_ha=c['area_ha'],geometry=mapping(p),district=nearest[1],landmark=c['name'],land_type=c['land_type'],b02=0.,b03=0.,b04=c['b04'],b08=c['b08'],b11=c['b11'] if c['b11'] is not None else 0.,status='detected',data_provenance=origin,provenance=('sentinel2_raster_missing_b02_missing_b03' if origin=='sentinel2_raster_live' else 'sentinel2_osm_missing_b02_missing_b03') if scene else 'uploaded_geotiff_missing_b02_missing_b03_missing_b11',scene_id=scene['scene_id'] if scene else None,source_key=key,observed_ndvi=c['ndvi'])
         if existing:
             for k,v in values.items():setattr(existing,k,v)
             updated+=1

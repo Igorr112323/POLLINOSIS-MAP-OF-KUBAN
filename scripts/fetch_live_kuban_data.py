@@ -18,7 +18,8 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'backend'))
 import httpx
 from shapely.geometry import mapping
-from app.services.satellite_service import BBOX, SatelliteError, find_scene, osm_parcels, read_scene, classify_parcels
+from app.services.satellite_service import BBOX, SatelliteError, find_scene, read_scene
+from app.services.raster_screening import raster_candidates, water_polygons, optional_landuse, enrich
 
 FORECAST='https://api.open-meteo.com/v1/forecast'
 ARCHIVE='https://archive-api.open-meteo.com/v1/archive'
@@ -72,18 +73,34 @@ def fetch_weather(today=None):
         'note':'Прогноз и ERA5 — модельные данные Open-Meteo, а не непосредственные измерения на месте.'}
 
 def fetch_satellite():
-    scene,urls=find_scene(); parcels,osm_endpoint=osm_parcels(return_endpoint=True); arrays,trans,crs=read_scene(urls)
-    candidates=classify_parcels(parcels,arrays,trans,crs,scene['calibration'])
-    features=[]
+    summer_window='2026-08-15T00:00:00Z/2026-08-31T23:59:59Z'
+    spring_window='2026-05-25T00:00:00Z/2026-06-10T23:59:59Z'
+    scene,urls=find_scene(window=summer_window,max_cloud=15)
+    print('Summer scene:',scene['scene_id'],flush=True)
+    arrays,trans,crs=read_scene(urls,resolution=20)
+    spring=None;spring_info={'status':'unavailable'}
+    try:
+        reference,ref_urls=find_scene(window=spring_window,max_cloud=15)
+        ref,_,_=read_scene(ref_urls,grid=(trans,crs,*arrays['scl'].shape))
+        spring=(ref,reference);spring_info={'status':'used','scene':reference,'asset_urls':ref_urls}
+    except Exception as e:
+        spring_info={'status':'unavailable','reason':f'{type(e).__name__}: {str(e)[:250]}'}
+    candidates=raster_candidates(arrays,trans,crs,scene,spring=spring)
+    water=water_polygons(arrays,trans,crs)
+    retrieved=datetime.now(timezone.utc).isoformat()
+    doc={'type':'FeatureCollection','schema_version':2,'retrieved_at':retrieved,'scene':scene,'asset_urls':urls,'bbox':list(BBOX),
+        'spring_reference':spring_info,'resolution_m':20,'features':[],
+        'osm_enrichment':{'status':'not_attempted'},'sources':{'geometry':'Sentinel-2 L2A raster pixels via Earth Search','imagery':'Copernicus Sentinel-2 L2A'},
+        'note':'Кандидаты растительности, не идентификация амброзии. SCL не гарантирует обнаружение воды или облаков; нужна полевая проверка.'}
+    mask={'type':'FeatureCollection','schema_version':1,'retrieved_at':retrieved,'scene_id':scene['scene_id'],'bbox':list(BBOX),
+        'note':'Вода класса SCL 6 на дату съёмки; не полная или точная карта водоёмов.',
+        'features':[{'type':'Feature','geometry':mapping(p),'properties':{}} for p in water]}
     for c in candidates:
-        features.append({'type':'Feature','geometry':mapping(c['geometry']),'properties':{
-            'osm_id':c['osm_id'],'land_type':c['land_type'],'name':c['name'],'area_ha':c['area_ha'],'ndvi':c['ndvi'],
+        doc['features'].append({'type':'Feature','geometry':mapping(c['geometry']),'properties':{
+            'candidate_id':c['osm_id'],'land_type':c['land_type'],'name':c['name'],'area_ha':c['area_ha'],'ndvi':c['ndvi'],'ndmi':c['ndmi'],
             'bands':{'B04':c['b04'],'B08':c['b08'],'B11':c['b11']},'valid_pixels':c['valid_pixels'],
-            'scene_id':scene['scene_id'],'data_provenance':'sentinel2_osm_live'}})
-    return {'type':'FeatureCollection','schema_version':1,'retrieved_at':datetime.now(timezone.utc).isoformat(),
-        'scene':scene,'asset_urls':urls,'bbox':list(BBOX),'osm_parcels':len(parcels),'features':features,
-        'osm_endpoint':osm_endpoint,'sources':{'geometry':'OpenStreetMap via Overpass API; © OpenStreetMap contributors, ODbL','imagery':'Copernicus Sentinel-2 L2A via Earth Search'},
-        'note':'NDVI показывает растительность; вид растения и присутствие амброзии не установлены. Нужна полевая проверка.'}
+            'scene_id':scene['scene_id'],'acquired_at':scene['acquired_at'],'data_provenance':'sentinel2_raster_live'}})
+    return doc,mask,candidates
 
 def atomic_json(path, data):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -95,19 +112,35 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir',type=Path,default=ROOT/'backend/data/real_snapshots')
     args=parser.parse_args(); out=args.output_dir;out.mkdir(parents=True,exist_ok=True)
-    tasks=[('sentinel2_osm','krasnodar_sentinel2_hotspots.geojson',fetch_satellite),('openmeteo','krasnodar_openmeteo.json',fetch_weather)]
     manifest={'schema_version':1,'started_at':datetime.now(timezone.utc).isoformat(),'results':{}}
-    for key,name,task in tasks:
-        # Never leave an old successful file masquerading as this run's output.
-        destination=out/name
-        if destination.exists():destination.unlink()
+    destination=out/'krasnodar_sentinel2_hotspots.geojson';mask_path=out/'krasnodar_sentinel2_water_mask.geojson'
+    for p in (destination,mask_path,out/'krasnodar_openmeteo.json'):
+        if p.exists():p.unlink()
+    try:
+        doc,mask,candidates=fetch_satellite()
+        # Persist the essential result before any optional external OSM request.
+        atomic_json(destination,doc);atomic_json(mask_path,mask)
+        manifest['results']['sentinel2']={'status':'success','file':destination.name,'features':len(candidates),'water_file':mask_path.name}
         try:
-            data=task();atomic_json(destination,data)
-            manifest['results'][key]={'status':'success','file':name,'features':len(data['features']) if 'features' in data else None}
-            print(f'{key}: success → {destination}',flush=True)
+            records,endpoint,errors=optional_landuse();enrich(candidates,records)
+            for f,c in zip(doc['features'],candidates):
+                f['properties']['land_type']=c['land_type']
+                if c.get('osm_reference'):f['properties']['osm_reference']=c['osm_reference']
+            doc['osm_enrichment']={'status':'success' if endpoint else 'unavailable','endpoint':endpoint,'errors':errors}
+            if endpoint:doc['sources']['enrichment']='© OpenStreetMap contributors, ODbL via '+endpoint
+            atomic_json(destination,doc)
+            manifest['results']['overpass']={'status':'success' if endpoint else 'unavailable','endpoint':endpoint,'errors':errors}
         except Exception as e:
-            manifest['results'][key]={'status':'error','error':f'{type(e).__name__}: {str(e)[:500]}'}
-            print(f'{key}: {manifest["results"][key]["error"]}',file=sys.stderr,flush=True)
+            manifest['results']['overpass']={'status':'unavailable','error':f'{type(e).__name__}: {str(e)[:400]}'}
+    except Exception as e:
+        manifest['results']['sentinel2']={'status':'error','error':f'{type(e).__name__}: {str(e)[:500]}'}
+        print('sentinel2:',manifest['results']['sentinel2']['error'],file=sys.stderr,flush=True)
+    try:
+        weather=fetch_weather();atomic_json(out/'krasnodar_openmeteo.json',weather)
+        manifest['results']['openmeteo']={'status':'success','file':'krasnodar_openmeteo.json'}
+    except Exception as e:
+        manifest['results']['openmeteo']={'status':'error','error':f'{type(e).__name__}: {str(e)[:500]}'}
+        print('openmeteo:',manifest['results']['openmeteo']['error'],file=sys.stderr,flush=True)
     manifest['finished_at']=datetime.now(timezone.utc).isoformat();atomic_json(out/'manifest.json',manifest)
-    return 0 if all(x['status']=='success' for x in manifest['results'].values()) else 1
+    return 0 if all(manifest['results'][x]['status']=='success' for x in ('sentinel2','openmeteo')) else 1
 if __name__=='__main__':sys.exit(main())
