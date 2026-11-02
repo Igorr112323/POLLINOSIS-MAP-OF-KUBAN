@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.3.5, pluggy-1.7.0 -- /home/user/POLLINOSIS-MAP-OF-KUBAN/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/user/POLLINOSIS-MAP-OF-KUBAN/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, platformdirs-4.14.3
+collecting ... collected 24 items
+
+tests/test_production_mode.py::test_production_mode_requires_secrets_and_disables_demo PASSED [  4%]
+tests/test_stage1_core.py::test_database PASSED                          [  8%]
+tests/test_stage1_core.py::test_geometry_and_spectral_indices PASSED     [ 12%]
+tests/test_stage1_core.py::test_validation_is_real_and_no_leakage PASSED [ 16%]
+tests/test_stage1_core.py::test_gaussian_downwind PASSED                 [ 20%]
+tests/test_stage1_core.py::test_scenarios_and_burst PASSED               [ 25%]
+tests/test_stage1_core.py::test_optimizer_budget PASSED                  [ 29%]
+tests/test_stage1_core.py::test_offline_weather_and_endpoints PASSED     [ 33%]
+tests/test_stage1_core.py::test_live_weather_cached_then_network_failure PASSED [ 37%]
+tests/test_stage2.py::test_auth_roles_and_private_data PASSED            [ 41%]
+tests/test_stage2.py::test_observation_import_retrain_reset_and_rollback PASSED [ 45%]
+tests/test_stage2.py::test_weekly_import_does_not_invent_days PASSED     [ 50%]
+tests/test_stage2.py::test_hotspot_import_validation_and_ndvi PASSED     [ 54%]
+tests/test_stage2.py::test_optimizer_pareto_strategies PASSED            [ 58%]
+tests/test_stage2.py::test_workflow_geofence_burst_and_export PASSED     [ 62%]
+tests/test_stage2.py::test_patient_forecast_privacy_dashboard_and_alerts PASSED [ 66%]
+tests/test_stage2.py::test_late_completion_increases_emissions_on_mowing_day PASSED [ 70%]
+tests/test_stage2.py::test_budget_strategy_requires_cap PASSED           [ 75%]
+tests/test_stage2.py::test_alert_records_not_configured_without_sending PASSED [ 79%]
+tests/test_stage2.py::test_dispatch_logs_and_keyed_feed PASSED           [ 83%]
+tests/test_stage2.py::test_personal_forecast_includes_source_contributions PASSED [ 87%]
+tests/test_stage2.py::test_dispatch_telegram_requires_explicit_flag_and_no_simulation_send PASSED [ 91%]
+tests/test_stage2.py::test_brigade_directory_and_feed_role_access PASSED [ 95%]
+tests/test_stage2.py::test_patient_can_list_clinics_without_access_to_dashboard PASSED [100%]
+
+============================= 24 passed in 20.37s ==============================

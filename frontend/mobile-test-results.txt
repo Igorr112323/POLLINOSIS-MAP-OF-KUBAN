@@ -1,0 +1,16 @@
+
+> pollinoz-terminal@1.0.0 test:mobile
+> node tests/mobile.cjs
+
+PASS 360px · field terminal
+PASS 360px · patient form
+PASS 360px · patient calendar
+PASS 360px · both print views
+PASS 390px · field terminal
+PASS 390px · patient form
+PASS 390px · patient calendar
+PASS 390px · both print views
+PASS 430px · field terminal
+PASS 430px · patient form
+PASS 430px · patient calendar
+PASS 430px · both print views

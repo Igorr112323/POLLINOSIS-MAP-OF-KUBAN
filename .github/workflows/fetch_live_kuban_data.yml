@@ -1,0 +1,68 @@
+name: Fetch live Kuban data
+
+on:
+  workflow_dispatch:
+  # This branch-only push trigger allows the initial run before the workflow is
+  # merged into the default branch (required by GitHub for workflow_dispatch).
+  push:
+    branches:
+      - arena/fc54dd0a-pollinosis-map-of-kuban
+    paths:
+      - '.github/workflows/fetch_live_kuban_data.yml'
+      - 'scripts/fetch_live_kuban_data.py'
+      - 'backend/app/services/satellite_service.py'
+      - 'backend/app/services/raster_screening.py'
+      - 'backend/requirements.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kuban-snapshot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Fetch real public sources (no synthetic fallback)
+        env:
+          OFFLINE: 'false'
+          PYTHONUNBUFFERED: '1'
+        run: python scripts/fetch_live_kuban_data.py --output-dir "$RUNNER_TEMP/kuban-snapshots"
+      - name: Upload source snapshots and status, even on partial failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: krasnodar-real-snapshots
+          path: ${{ runner.temp }}/kuban-snapshots/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Save successful snapshots and manifest to the session branch
+        if: always() && github.ref == 'refs/heads/arena/fc54dd0a-pollinosis-map-of-kuban'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f "$RUNNER_TEMP/kuban-snapshots/manifest.json" ]; then
+            echo "No manifest was produced; preserving existing snapshots."
+            exit 0
+          fi
+          mkdir -p backend/data/real_snapshots
+          cp "$RUNNER_TEMP"/kuban-snapshots/* backend/data/real_snapshots/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f backend/data/real_snapshots/
+          if git diff --cached --quiet; then echo "No snapshot changes."; exit 0; fi
+          git commit -m "Update public Kuban source snapshots"
+          git fetch origin arena/fc54dd0a-pollinosis-map-of-kuban
+          git rebase FETCH_HEAD
+          git push origin HEAD:refs/heads/arena/fc54dd0a-pollinosis-map-of-kuban

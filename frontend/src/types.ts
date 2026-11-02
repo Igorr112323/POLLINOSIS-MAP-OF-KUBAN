@@ -1,0 +1,15 @@
+export type Mode = 'live'|'simulation'
+export type Scenario = 'current'|'no_mowing'|'optimal_489ha'|'late_mowing_august_burst'
+export type Neighborhood = {name:string;district:string;latitude:number;longitude:number;population_estimate:number}
+export type Passport = {districts:string[];neighborhoods:Neighborhood[];municipalities:{name:string;latitude:number;longitude:number}[]; reference_point:{latitude:number;longitude:number;name:string}}
+export type Health = {status:string;hotspots:number;weekly_observations:number;data_provenance:string;weather_cache_entries:number}
+export type HotspotProperties = {id:number;area_ha:number;district:string;landmark:string;land_type:string;bands:Record<string,number|null>;ndvi:number;ndre:number|null;ndmi:number|null;biomass_density:number;transport_probability:number;exposure_risk:number;cost_effectiveness:number;rank:number;nearest_neighborhood:string;distance_m:number;azimuth_deg:number;status:string;mowing_date:string|null;data_provenance:string;bands_note:string;scene_id:string|null;scene_acquired_at:string|null;scene_cloud_cover:number|null;source_format:string;source_key:string|null}
+export type Polygon = {type:'Polygon';coordinates:number[][][]}
+export type Feature<P> = {type:'Feature';geometry:Polygon;properties:P}
+export type Collection<P> = {type:'FeatureCollection';features:Feature<P>[]}
+export type Hotspots = Collection<HotspotProperties>
+export type Grid = Collection<{concentration:number;risk:string}> & {summary:{population_weighted_concentration:number;weather_source:string;wind_speed_m_s:number;wind_from_degrees:number;date:string;hotspot_data_provenance:string[];neighborhoods:{name:string;district:string;concentration:number;risk:string}[]}}
+export type Weather = {source:string;cache_origin?:string;cache_updated_at?:string;gdd_source:string;gdd_10:number;days:{date:string;tmax:number;tmin:number;dew:number;wind_speed:number;wind_direction:number;precipitation:number}[]}
+export type Clinical = {days:{date:string;concentration_grains_m3:number;danger_probability:number;risk:string}[];neighborhoods:{name:string;date:string;concentration:number}[];data_provenance:string;weather_source:string;recommendation:string}
+export type WorkOrder={id:number;order_number:string;hotspot_id:number;district:string;area_ha:number;priority_rank:number;brigade_id:number|null;planned_date:string;pre_flowering:boolean;status:string;gps_lat:number|null;gps_lon:number|null;distance_m:number|null;geofence_ok:boolean|null;photo_before:string|null;photo_after:string|null;area_mowed_ha:number|null;completed_date:string|null;notes:string|null}
+export type Subscription={id:number;owner_id:number;clinic_id:number|null;name:string;neighborhood:string;latitude:number;longitude:number;clinical_profile:string;threshold:number;lead_days:number;phone:string|null;telegram_chat_id:string|null;active:boolean}

@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "database": "ok",
+  "weather_cache_entries": 0,
+  "model_loaded": true,
+  "hotspots": 189,
+  "weekly_observations": 109,
+  "daily_observations": 1461,
+  "data_provenance": "synthetic_demo",
+  "uploaded_observation_records": 0
+}
