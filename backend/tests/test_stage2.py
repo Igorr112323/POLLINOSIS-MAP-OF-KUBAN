@@ -403,16 +403,18 @@ def test_satellite_migration_preserves_existing_rows(tmp_path):
     with engine.begin() as conn:
         conn.execute(text('CREATE TABLE hotspots (id INTEGER PRIMARY KEY, data_provenance VARCHAR)'))
         conn.execute(text("INSERT INTO hotspots(id,data_provenance) VALUES(1,'uploaded_dataset')"))
+        conn.execute(text('CREATE TABLE weather_cache (id INTEGER PRIMARY KEY, key VARCHAR, payload JSON, updated_at DATETIME)'))
+        conn.execute(text("INSERT INTO weather_cache(id,key,payload,updated_at) VALUES(1,'original','{}','2026-01-01')"))
     migrate_satellite(engine);migrate_satellite(engine)
     with engine.connect() as conn:
         assert conn.execute(text('SELECT id,data_provenance,scene_id,source_key,observed_ndvi FROM hotspots')).one()==(1,'uploaded_dataset',None,None,None)
+        assert conn.execute(text('SELECT id,key,source_origin FROM weather_cache')).one()==(1,'original',None)
     assert {'scene_id','source_key','observed_ndvi'} <= {c['name'] for c in inspect(engine).get_columns('hotspots')}
     engine.dispose()
 
 def test_snapshot_import_is_validated_additive_and_labels_cache(client, monkeypatch):
-    import sys
     import importlib
-    import numpy as np
+    from sqlalchemy.exc import IntegrityError
     from datetime import datetime, timedelta, timezone
     from shapely.geometry import box, mapping
     root=Path(__file__).resolve().parents[2]
@@ -433,7 +435,21 @@ def test_snapshot_import_is_validated_additive_and_labels_cache(client, monkeypa
     validated,sites=imp.validate_satellite(doc)
     with SessionLocal() as db: result=imp.import_data(db,validated,sites,windows)
     assert result['satellite']['inserted']==1 and result['weather_cache']['inserted']==50
+    with SessionLocal() as db: repeated=imp.import_data(db,validated,sites,windows)
+    assert repeated['satellite']['inserted']==0 and repeated['satellite']['updated']==1
+    assert repeated['weather_cache']['inserted']==0 and repeated['weather_cache']['newer_existing_skipped']==50
+    from app.models.tables import WeatherCache
+    original=imp.save_candidates
+    def fail_after_candidates(db,*args,**kwargs):
+        result=original(db,*args,**kwargs)
+        db.add(WeatherCache(key=None,payload={}))
+        return result
+    monkeypatch.setattr(imp,'save_candidates',fail_after_candidates)
+    sites[0]['name']='must roll back'
+    with SessionLocal() as db:
+        with pytest.raises(IntegrityError):imp.import_data(db,validated,sites,windows)
     entries=client.get('/api/v1/gis/hotspots').json()['features'];assert len(entries)==190
+    assert not any(f['properties']['landmark']=='must roll back' for f in entries)
     assert any(f['properties']['scene_id']=='S2_MOCK_TEST' for f in entries)
     r=client.get('/api/v1/weather/forecast',params={'mode':'simulation','target_date':'2026-07-25'})
     assert r.status_code==200 and r.json()['source']=='open-meteo-cache' and r.json()['cache_origin']=='open-meteo-era5' and r.json()['days'][0]['tmax']==30
