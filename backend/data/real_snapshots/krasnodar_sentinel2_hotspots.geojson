@@ -1,7 +1,7 @@
 {
   "type": "FeatureCollection",
   "schema_version": 2,
-  "retrieved_at": "2026-11-02T23:21:46.740108+00:00",
+  "retrieved_at": "2026-11-02T23:27:29.141137+00:00",
   "scene": {
     "scene_id": "S2B_37TDK_20260827_0_L2A",
     "acquired_at": "2026-08-27T08:27:39.520000Z",
@@ -1371,7 +1371,7 @@
       },
       "properties": {
         "candidate_id": "raster/fc41487c7e6ef8887673435e",
-        "land_type": "стройка",
+        "land_type": "не определён по спутнику",
         "name": "Спутниковый кандидат",
         "area_ha": 2.8381143969139884,
         "ndvi": 0.8894618153572083,
@@ -1384,8 +1384,7 @@
         "valid_pixels": 71,
         "scene_id": "S2B_37TDK_20260827_0_L2A",
         "acquired_at": "2026-08-27T08:27:39.520000Z",
-        "data_provenance": "sentinel2_raster_live",
-        "osm_reference": "way/1209185689"
+        "data_provenance": "sentinel2_raster_live"
       }
     },
     {
@@ -1570,7 +1569,7 @@
       },
       "properties": {
         "candidate_id": "raster/f0942e3737b834c9493ef47f",
-        "land_type": "промзона",
+        "land_type": "не определён по спутнику",
         "name": "Спутниковый кандидат",
         "area_ha": 0.319787636490271,
         "ndvi": 0.8756508827209473,
@@ -1583,8 +1582,7 @@
         "valid_pixels": 8,
         "scene_id": "S2B_37TDK_20260827_0_L2A",
         "acquired_at": "2026-08-27T08:27:39.520000Z",
-        "data_provenance": "sentinel2_raster_live",
-        "osm_reference": "way/37394181"
+        "data_provenance": "sentinel2_raster_live"
       }
     },
     {
@@ -1990,7 +1988,7 @@
       },
       "properties": {
         "candidate_id": "raster/5c8dd063a68e62785dc2b723",
-        "land_type": "стройка",
+        "land_type": "не определён по спутнику",
         "name": "Спутниковый кандидат",
         "area_ha": 0.9193892208473174,
         "ndvi": 0.862155020236969,
@@ -2003,8 +2001,7 @@
         "valid_pixels": 23,
         "scene_id": "S2B_37TDK_20260827_0_L2A",
         "acquired_at": "2026-08-27T08:27:39.520000Z",
-        "data_provenance": "sentinel2_raster_live",
-        "osm_reference": "way/1209185692"
+        "data_provenance": "sentinel2_raster_live"
       }
     },
     {
@@ -2577,14 +2574,18 @@
     }
   ],
   "osm_enrichment": {
-    "status": "success",
-    "endpoint": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-    "errors": []
+    "status": "unavailable",
+    "endpoint": null,
+    "errors": [
+      "https://maps.mail.ru/osm/tools/overpass/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout",
+      "https://overpass.private.coffee/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout",
+      "https://overpass-api.de/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout",
+      "https://overpass.kumi.systems/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout"
+    ]
   },
   "sources": {
     "geometry": "Sentinel-2 L2A raster pixels via Earth Search",
-    "imagery": "Copernicus Sentinel-2 L2A",
-    "enrichment": "© OpenStreetMap contributors, ODbL via https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+    "imagery": "Copernicus Sentinel-2 L2A"
   },
   "note": "Кандидаты растительности, не идентификация амброзии. SCL не гарантирует обнаружение воды или облаков; нужна полевая проверка."
 }

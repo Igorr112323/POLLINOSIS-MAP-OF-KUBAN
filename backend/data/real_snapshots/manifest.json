@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "started_at": "2026-11-02T23:21:38.794915+00:00",
+  "started_at": "2026-11-02T23:27:22.808071+00:00",
   "results": {
     "sentinel2": {
       "status": "success",
@@ -9,14 +9,19 @@
       "water_file": "krasnodar_sentinel2_water_mask.geojson"
     },
     "overpass": {
-      "status": "success",
-      "endpoint": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-      "errors": []
+      "status": "unavailable",
+      "endpoint": null,
+      "errors": [
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout",
+        "https://overpass.private.coffee/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout",
+        "https://overpass-api.de/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout",
+        "https://overpass.kumi.systems/api/interpreter: SatelliteError: Геосервис недоступен или вернул некорректные данные: ReadTimeout"
+      ]
     },
     "openmeteo": {
       "status": "success",
       "file": "krasnodar_openmeteo.json"
     }
   },
-  "finished_at": "2026-11-02T23:22:08.876287+00:00"
+  "finished_at": "2026-11-02T23:29:42.792967+00:00"
 }
