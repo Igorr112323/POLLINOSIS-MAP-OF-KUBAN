@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "retrieved_at": "2026-11-02T22:59:24.653404+00:00",
+  "retrieved_at": "2026-11-02T23:03:37.608727+00:00",
   "coordinates": {
     "latitude": 45.035,
     "longitude": 38.975
@@ -22,7 +22,7 @@
     "provider_response": {
       "latitude": 45.027065,
       "longitude": 38.95273,
-      "generationtime_ms": 12.248992919921875,
+      "generationtime_ms": 4.4051408767700195,
       "utc_offset_seconds": 10800,
       "timezone": "Europe/Moscow",
       "timezone_abbreviation": "GMT+3",
@@ -993,7 +993,7 @@
     "provider_response": {
       "latitude": 45.0,
       "longitude": 39.0,
-      "generationtime_ms": 9.099364280700684,
+      "generationtime_ms": 5.658745765686035,
       "utc_offset_seconds": 10800,
       "timezone": "Europe/Moscow",
       "timezone_abbreviation": "GMT+3",

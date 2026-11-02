@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "started_at": "2026-11-02T22:59:22.714141+00:00",
+  "started_at": "2026-11-02T23:00:31.280141+00:00",
   "results": {
     "sentinel2_osm": {
       "status": "error",
-      "error": "SatelliteError: overpass-api.de: HTTP 406: <html>\r <head><title>406 Not Acceptable</title></head>\r <body>\r <center><h1>406 Not Acceptable</h1></center>\r <hr><center>nginx</center>\r </body>\r </html>\r "
+      "error": "SatelliteError: Все Overpass-серверы недоступны: overpass-api.de: HTTP 406: <html>\r <head><title>406 Not Acceptable</title></head>\r <body>\r <center><h1>406 Not Acceptable</h1></center>\r <hr><center>nginx</center>\r </body>\r </html>\r ; Геосервис недоступен или вернул некорректные данные: ReadTimeout; Геосервис недоступен или вернул некорректные данные: ReadTimeout"
     },
     "openmeteo": {
       "status": "success",
@@ -12,5 +12,5 @@
       "features": null
     }
   },
-  "finished_at": "2026-11-02T22:59:24.664392+00:00"
+  "finished_at": "2026-11-02T23:03:37.614930+00:00"
 }
