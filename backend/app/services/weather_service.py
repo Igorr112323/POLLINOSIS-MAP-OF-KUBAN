@@ -31,8 +31,8 @@ async def weather(db, municipality, mode, target):
                     days.append({'date':ds,'tmax':daily['temperature_2m_max'][i], 'tmin':daily['temperature_2m_min'][i], 'dew':sum(values)/len(values) if values else None, 'wind_speed':daily['wind_speed_10m_max'][i], 'wind_direction':daily['wind_direction_10m_dominant'][i], 'precipitation':daily['precipitation_sum'][i], 'radiation':daily['shortwave_radiation_sum'][i]})
                 if len(days) != 14 or any(any(day[k] is None for k in ('tmax','tmin','dew','wind_speed','wind_direction')) for day in days):
                     raise ValueError('incomplete weather response')
-                if cached: cached.payload=days; cached.updated_at=datetime.now(timezone.utc)
-                else: db.add(WeatherCache(key=key,payload=days,updated_at=datetime.now(timezone.utc)))
+                if cached: cached.payload=days; cached.updated_at=datetime.now(timezone.utc); cached.source_origin='open-meteo-forecast' if mode=='live' else 'open-meteo-archive'
+                else: db.add(WeatherCache(key=key,payload=days,updated_at=datetime.now(timezone.utc),source_origin='open-meteo-forecast' if mode=='live' else 'open-meteo-archive'))
                 try:
                     db.commit()
                 except IntegrityError:
@@ -45,7 +45,10 @@ async def weather(db, municipality, mode, target):
         except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
             db.rollback()
     if cached:
-        return finish(db,cached.payload,'open-meteo-cache',target,municipality)
+        result=finish(db,cached.payload,'open-meteo-cache',target,municipality)
+        result['cache_origin']=cached.source_origin or 'open-meteo-unknown'
+        result['cache_updated_at']=cached.updated_at.isoformat()+'Z' if cached.updated_at.tzinfo is None else cached.updated_at.isoformat()
+        return result
     days=[]
     for i in range(14):
         d=target+timedelta(days=i)

@@ -53,5 +53,7 @@ def migrate_satellite(engine):
             if name not in columns:
                 conn.execute(text(f'ALTER TABLE hotspots ADD COLUMN {name} {sqltype}'))
         conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_hotspots_source_key ON hotspots (source_key)'))
+        if 'weather_cache' in inspector.get_table_names() and 'source_origin' not in {c['name'] for c in inspector.get_columns('weather_cache')}:
+            conn.execute(text('ALTER TABLE weather_cache ADD COLUMN source_origin VARCHAR'))
         if 'satellite_scenes' in inspector.get_table_names() and 'band_calibration' not in {c['name'] for c in inspector.get_columns('satellite_scenes')}:
             conn.execute(text('ALTER TABLE satellite_scenes ADD COLUMN band_calibration JSON'))

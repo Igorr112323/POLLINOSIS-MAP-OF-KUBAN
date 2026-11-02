@@ -46,7 +46,11 @@ def _json_post(url, **kwargs):
     try:
         with httpx.Client(timeout=httpx.Timeout(90,connect=10),follow_redirects=False) as client:
             with client.stream('POST',url,**kwargs) as response:
-                response.raise_for_status(); chunks=[]; size=0
+                if response.is_error:
+                    response.read()
+                    detail=response.text[:400].replace('\n',' ')
+                    raise SatelliteError(f'{urlparse(url).hostname}: HTTP {response.status_code}: {detail}')
+                chunks=[]; size=0
                 for chunk in response.iter_bytes():
                     size+=len(chunk)
                     if size>30_000_000: raise SatelliteError('Ответ геосервиса слишком велик')
@@ -207,7 +211,7 @@ def offline_candidates(red_bytes,nir_bytes=None,red_band=1,nir_band=2,reflectanc
     except SatelliteError:raise
     except (rasterio.errors.RasterioError,ValueError,TypeError,OSError) as e:raise SatelliteError('Некорректный GeoTIFF: '+str(e)[:250]) from e
 
-def save_candidates(db,candidates,origin,scene=None):
+def save_candidates(db,candidates,origin,scene=None,commit=True):
     inserted=updated=skipped=0
     next_id=(db.scalar(select(func.max(Hotspot.id))) or 0)+1
     if scene:
@@ -227,5 +231,6 @@ def save_candidates(db,candidates,origin,scene=None):
             updated+=1
         else:
             db.add(Hotspot(id=next_id,**values));next_id+=1;inserted+=1
-    db.commit()
+    if commit:db.commit()
+    else:db.flush()
     return {'detected':len(candidates),'inserted':inserted,'updated':updated,'skipped_reserved':skipped,'scene':scene,'data_provenance':origin,'note':'NDVI показывает зелёную растительность, а не вид растения или наличие амброзии. Нужна проверка на месте.'}

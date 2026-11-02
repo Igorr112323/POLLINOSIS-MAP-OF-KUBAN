@@ -64,6 +64,7 @@ class WeatherCache(Base):
     key: Mapped[str] = mapped_column(String, unique=True, index=True)
     payload: Mapped[dict] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
+    source_origin: Mapped[str | None] = mapped_column(String, nullable=True)
 
 from sqlalchemy import Boolean, ForeignKey, Text
 

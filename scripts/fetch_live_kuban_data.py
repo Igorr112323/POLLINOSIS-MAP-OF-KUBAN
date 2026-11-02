@@ -12,6 +12,7 @@ import sys
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'backend'))
@@ -55,7 +56,7 @@ def _days(payload, expected_dates):
     return result
 
 def fetch_weather(today=None):
-    today=today or date.today()
+    today=today or datetime.now(ZoneInfo('Europe/Moscow')).date()
     # Use the latest completed Jul-Aug season, leaving time for ERA5 publication.
     year=today.year if today>=date(today.year,9,7) else today.year-1
     start,end=date(year,7,1),date(year,8,31)
@@ -104,7 +105,7 @@ def main():
             data=task();atomic_json(destination,data)
             manifest['results'][key]={'status':'success','file':name,'features':len(data['features']) if 'features' in data else None}
             print(f'{key}: success → {destination}',flush=True)
-        except (SatelliteError,Exception) as e:
+        except Exception as e:
             manifest['results'][key]={'status':'error','error':f'{type(e).__name__}: {str(e)[:500]}'}
             print(f'{key}: {manifest["results"][key]["error"]}',file=sys.stderr,flush=True)
     manifest['finished_at']=datetime.now(timezone.utc).isoformat();atomic_json(out/'manifest.json',manifest)

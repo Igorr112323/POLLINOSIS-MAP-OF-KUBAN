@@ -408,3 +408,36 @@ def test_satellite_migration_preserves_existing_rows(tmp_path):
         assert conn.execute(text('SELECT id,data_provenance,scene_id,source_key,observed_ndvi FROM hotspots')).one()==(1,'uploaded_dataset',None,None,None)
     assert {'scene_id','source_key','observed_ndvi'} <= {c['name'] for c in inspect(engine).get_columns('hotspots')}
     engine.dispose()
+
+def test_snapshot_import_is_validated_additive_and_labels_cache(client, monkeypatch):
+    import sys
+    import importlib
+    import numpy as np
+    from datetime import datetime, timedelta, timezone
+    from shapely.geometry import box, mapping
+    root=Path(__file__).resolve().parents[2]
+    monkeypatch.syspath_prepend(str(root/'scripts'))
+    fetch=importlib.import_module('fetch_live_kuban_data')
+    imp=importlib.import_module('import_live_kuban_data')
+    def mock_weather(url,params):
+        first=date.fromisoformat(params['start_date']);last=date.fromisoformat(params['end_date'])
+        dates=[(first+timedelta(days=i)).isoformat() for i in range((last-first).days+1)]
+        daily={'time':dates};daily.update({key:[val]*len(dates) for key,val in zip(fetch.DAILY,[30,20,0,2,90,20])})
+        return {'daily':daily,'hourly':{'time':[d+'T12:00' for d in dates],'dew_point_2m':[15]*len(dates)}}
+    monkeypatch.setattr(fetch,'_http_get',mock_weather)
+    weather=fetch.fetch_weather(date(2026,11,3));windows=imp.validate_weather(weather)
+    assert weather['archive']['parameters']['models']=='era5' and len(windows)==50
+    shape=box(39.0,45.08,39.001,45.081)
+    scene={'scene_id':'S2_MOCK_TEST','acquired_at':'2026-08-24T10:00:00Z','cloud_cover':3.,'thumbnail':None,'calibration':{k:{'scale':.0001,'offset':-.1} for k in ('red','nir','swir16')}}
+    doc={'type':'FeatureCollection','schema_version':1,'bbox':list(imp.BBOX),'retrieved_at':datetime.now(timezone.utc).isoformat(),'scene':scene,'asset_urls':{k:'https://sentinel-cogs.s3.us-west-2.amazonaws.com/test/'+k+'.tif' for k in ('red','nir','swir16','scl')},'features':[{'type':'Feature','geometry':mapping(shape),'properties':{'osm_id':'way/101/0','land_type':'grass','name':'test','area_ha':imp._area_ha(shape),'ndvi':.5,'bands':{'B04':.1,'B08':.3,'B11':.2},'valid_pixels':3,'scene_id':'S2_MOCK_TEST','data_provenance':'sentinel2_osm_live'}}]}
+    validated,sites=imp.validate_satellite(doc)
+    with SessionLocal() as db: result=imp.import_data(db,validated,sites,windows)
+    assert result['satellite']['inserted']==1 and result['weather_cache']['inserted']==50
+    entries=client.get('/api/v1/gis/hotspots').json()['features'];assert len(entries)==190
+    assert any(f['properties']['scene_id']=='S2_MOCK_TEST' for f in entries)
+    r=client.get('/api/v1/weather/forecast',params={'mode':'simulation','target_date':'2026-07-25'})
+    assert r.status_code==200 and r.json()['source']=='open-meteo-cache' and r.json()['cache_origin']=='open-meteo-era5' and r.json()['days'][0]['tmax']==30
+    doc['features'][0]['properties']['scene_id']='different'
+    with pytest.raises(ValueError):imp.validate_satellite(doc)
+    weather['archive']['parameters']['models']='other'
+    with pytest.raises(ValueError):imp.validate_weather(weather)

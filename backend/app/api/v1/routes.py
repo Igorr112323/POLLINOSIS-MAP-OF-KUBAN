@@ -1,4 +1,5 @@
-from datetime import date,timedelta
+from datetime import date,datetime,timedelta
+from zoneinfo import ZoneInfo
 from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select, text
@@ -20,7 +21,7 @@ Scenario=Literal['current','no_mowing','optimal_489ha','late_mowing_august_burst
 def spots(db): return list(db.scalars(select(Hotspot).order_by(Hotspot.id)))
 
 def day_for(mode, target_date):
-    d=target_date or date.today()
+    d=target_date or datetime.now(ZoneInfo('Europe/Moscow')).date()
     if mode=='simulation' and not 2023<=d.year<=2026:
         raise HTTPException(422,'Для симуляции доступны 2023–2026 годы')
     return d
